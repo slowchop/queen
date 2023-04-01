@@ -1,0 +1,24 @@
+[package]
+name = "colony_side_effects"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+authors = ["gak"]
+
+[dependencies]
+bevy = { version = "0.10.0", features = ["serialize"] }
+bevy_prototype_debug_lines = { version = "0.10.1", features = ["shapes"] }
+bevy_egui = "0.20.1"
+color-eyre = "0.6.2"
+serde_yaml = "0.9.19"
+serde = "1.0.158"
+rand = "0.8.5"
+getrandom = { version = "0.2.8", features = ["js"] }
+
+# Enable a small amount of optimization in debug mode
+[profile.dev]
+opt-level = 1
+
+# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
+[profile.dev.package."*"]
+opt-level = 3

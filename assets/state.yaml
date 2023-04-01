@@ -1,0 +1,42 @@
+Splash:
+  display: Splash
+  asset: 'menus/splash.png'
+  ms: 2000
+  next: MainMenu
+
+MainMenu:
+  display: Menu
+  logo: 'menus/logo.png'
+  background: 'menus/background.png'
+  title: 'Main Menu'
+  items:
+    - display: Text
+      id: Play
+      text: Play
+      next: Game
+    - display: Text
+      id: Exit
+      text: Exit
+      next: Exit
+      only_wasm: true
+
+Game:
+  display: Game
+
+#- state: SkillSelect
+#  display: Menu
+#  logo: 'menus/logo.png'
+#  text: 'Select your skill level'
+#  items:
+#    - id: Easy
+#      text: Easy
+#      next: Game
+#    - id: Medium
+#      text: Medium
+#      next: Game
+#    - id: Hard
+#      text: Hard
+#      next: Game
+#    - layout: break
+#    - text: Back
+#      next: MainMenu

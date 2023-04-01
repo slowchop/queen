@@ -1,0 +1,10 @@
+[[hooks]]
+stage = "build"
+command = "mkdir"
+command_arguments = ["-p", "dist/.stage/assets/"]
+
+[[hooks]]
+stage = "build"
+command = "cp"
+command_arguments = ["-r", "assets/*", "dist/.stage/assets/"]
+
