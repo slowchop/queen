@@ -16,6 +16,15 @@ pub struct MouseButtonInputMap(HashMap<MouseButton, Action>);
 #[derive(Resource, Deref, DerefMut)]
 pub struct InputStates(HashMap<Action, InputState>);
 
+impl InputStates {
+    pub fn is_pressed(&self, action: Action) -> bool {
+        self.0
+            .get(&action)
+            .map(|state| state.is_pressed)
+            .unwrap_or(false)
+    }
+}
+
 #[derive(Default, Copy, Clone)]
 pub struct InputState {
     pub just_pressed: bool,

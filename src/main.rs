@@ -43,6 +43,9 @@ fn main() -> Result<()> {
     app.add_plugin(EguiPlugin);
     app.add_plugin(DebugLinesPlugin::default());
 
+    // Game plugins
+    app.add_plugin(game::GamePlugin);
+
     // Game resources
     app.insert_resource(game_settings);
     app.insert_resource(state_config);
