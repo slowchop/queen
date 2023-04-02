@@ -40,8 +40,8 @@ pub fn setup_map(
 
     // Create dirt from Y - 1 and downwards with a width of 20.
     // Y 0 or higher is the surface, so make Dirt::empty()
-    let width = 20;
-    for y in -20..20 {
+    let width = 40;
+    for y in -30..20 {
         for x in -width / 2..width / 2 {
             let cell_content = if y >= 0 {
                 CellContent::empty_air()
@@ -63,8 +63,10 @@ pub fn setup_map(
                 if forced_dirt_amount > 50u64 && forced_dirt_amount < 255u64 {
                     info!("Forced dirt {} at {}, {}", forced_dirt_amount, x, y);
                     CellContent::dirt(forced_dirt_amount as u8)
-                } else if y >= -2 {
-                    CellContent::dirt((255f32 - rand::random::<f32>() * 10.0) as u8)
+                } else if y >= -5 {
+                    CellContent::dirt(
+                        (255f32 - rand::random::<f32>() * (255.0 / 5f32) * y.abs() as f32) as u8,
+                    )
                 } else {
                     if rand::random::<u8>() < 5 {
                         CellContent::rock(true)
