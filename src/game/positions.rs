@@ -35,6 +35,15 @@ impl SideIPos {
     }
 }
 
+impl From<&Vec3> for SideIPos {
+    fn from(vec: &Vec3) -> Self {
+        Self::new(
+            (vec.x / SIDE_CELL_SIZE as f32).floor() as i32,
+            (vec.y / SIDE_CELL_SIZE as f32).floor() as i32,
+        )
+    }
+}
+
 impl PartialOrd<Self> for SideIPos {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))

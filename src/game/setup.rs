@@ -164,7 +164,7 @@ pub fn setup_ants(mut commands: Commands, asset_server: Res<AssetServer>) {
             transform: Transform::from_translation(Vec3::new(
                 (2.0 + x as f32) * SIDE_CELL_SIZE as f32,
                 0.0,
-                0.0,
+                1.0,
             )),
             sprite: sprite(),
             texture,
@@ -176,7 +176,7 @@ pub fn setup_ants(mut commands: Commands, asset_server: Res<AssetServer>) {
             Speed::default(),
             Hunger::default(),
             Assignment::None,
-            Path::NeedsPath(SideIPos::new(0, -20)),
+            Path::NeedsPath(SideIPos::new(0 + x, -20)),
         ));
     }
 }

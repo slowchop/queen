@@ -45,6 +45,7 @@ impl Plugin for GamePlugin {
         app.add_system(ui::control);
 
         app.add_systems((actions::left_mouse_click,));
+        app.add_systems((pathfinding::needs_path, pathfinding::move_along_path));
     }
 
     fn name(&self) -> &str {
