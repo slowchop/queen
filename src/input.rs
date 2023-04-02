@@ -8,19 +8,26 @@ use bevy::utils::HashMap;
 use serde::{Deserialize, Serialize};
 
 #[derive(Resource, Deref, DerefMut)]
-pub struct KeyboardInputMap(HashMap<KeyCode, Action>);
+pub struct KeyboardInputMap(HashMap<KeyCode, InputAction>);
 
 #[derive(Resource, Deref, DerefMut)]
-pub struct MouseButtonInputMap(HashMap<MouseButton, Action>);
+pub struct MouseButtonInputMap(HashMap<MouseButton, InputAction>);
 
 #[derive(Resource, Deref, DerefMut)]
-pub struct InputStates(HashMap<Action, InputState>);
+pub struct InputStates(HashMap<InputAction, InputState>);
 
 impl InputStates {
-    pub fn is_pressed(&self, action: Action) -> bool {
+    pub fn is_pressed(&self, action: InputAction) -> bool {
         self.0
             .get(&action)
             .map(|state| state.is_pressed)
+            .unwrap_or(false)
+    }
+
+    pub fn just_pressed(&self, action: InputAction) -> bool {
+        self.0
+            .get(&action)
+            .map(|state| state.just_pressed)
             .unwrap_or(false)
     }
 }
@@ -39,12 +46,12 @@ pub enum EventState {
 }
 
 pub struct ActionEvent {
-    pub action: Action,
+    pub action: InputAction,
     pub state: EventState,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum Action {
+pub enum InputAction {
     Up,
     Down,
     Left,
@@ -62,23 +69,23 @@ pub fn setup(mut commands: Commands) {
     let mut keyboard_input_map = HashMap::new();
     let mut mouse_button_input_map = HashMap::new();
 
-    keyboard_input_map.insert(KeyCode::Up, Action::Up);
-    keyboard_input_map.insert(KeyCode::Down, Action::Down);
-    keyboard_input_map.insert(KeyCode::Left, Action::Left);
-    keyboard_input_map.insert(KeyCode::Right, Action::Right);
+    keyboard_input_map.insert(KeyCode::Up, InputAction::Up);
+    keyboard_input_map.insert(KeyCode::Down, InputAction::Down);
+    keyboard_input_map.insert(KeyCode::Left, InputAction::Left);
+    keyboard_input_map.insert(KeyCode::Right, InputAction::Right);
 
-    keyboard_input_map.insert(KeyCode::W, Action::Up);
-    keyboard_input_map.insert(KeyCode::S, Action::Down);
-    keyboard_input_map.insert(KeyCode::A, Action::Left);
-    keyboard_input_map.insert(KeyCode::D, Action::Right);
+    keyboard_input_map.insert(KeyCode::W, InputAction::Up);
+    keyboard_input_map.insert(KeyCode::S, InputAction::Down);
+    keyboard_input_map.insert(KeyCode::A, InputAction::Left);
+    keyboard_input_map.insert(KeyCode::D, InputAction::Right);
 
-    keyboard_input_map.insert(KeyCode::Return, Action::Confirm);
-    keyboard_input_map.insert(KeyCode::Space, Action::Jump);
-    keyboard_input_map.insert(KeyCode::E, Action::Use);
-    keyboard_input_map.insert(KeyCode::Q, Action::Special);
+    keyboard_input_map.insert(KeyCode::Return, InputAction::Confirm);
+    keyboard_input_map.insert(KeyCode::Space, InputAction::Jump);
+    keyboard_input_map.insert(KeyCode::E, InputAction::Use);
+    keyboard_input_map.insert(KeyCode::Q, InputAction::Special);
 
-    mouse_button_input_map.insert(MouseButton::Left, Action::PrimaryAction);
-    mouse_button_input_map.insert(MouseButton::Right, Action::SecondaryAction);
+    mouse_button_input_map.insert(MouseButton::Left, InputAction::PrimaryAction);
+    mouse_button_input_map.insert(MouseButton::Right, InputAction::SecondaryAction);
 
     commands.insert_resource(KeyboardInputMap(keyboard_input_map));
     commands.insert_resource(MouseButtonInputMap(mouse_button_input_map));

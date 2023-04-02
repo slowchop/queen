@@ -1,5 +1,5 @@
 use crate::game::SidePosition;
-use crate::input::{Action, InputStates};
+use crate::input::{InputAction, InputStates};
 use bevy::core_pipeline::clear_color::ClearColorConfig;
 use bevy::prelude::*;
 
@@ -48,16 +48,16 @@ pub fn control(
     input_states: Res<InputStates>,
 ) {
     let mut movement = Vec2::ZERO;
-    if input_states.is_pressed(Action::Left) {
+    if input_states.is_pressed(InputAction::Left) {
         movement.x -= 1.0;
     }
-    if input_states.is_pressed(Action::Right) {
+    if input_states.is_pressed(InputAction::Right) {
         movement.x += 1.0;
     }
-    if input_states.is_pressed(Action::Up) {
+    if input_states.is_pressed(InputAction::Up) {
         movement.y += 1.0;
     }
-    if input_states.is_pressed(Action::Down) {
+    if input_states.is_pressed(InputAction::Down) {
         movement.y -= 1.0;
     }
 

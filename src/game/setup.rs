@@ -1,6 +1,6 @@
 use crate::game::camera::CameraFocus;
 use crate::game::dirt::Dirt;
-use crate::game::{Crawler, Hunger, PlayerState, SideCell, SideDirtCells, Speed};
+use crate::game::{Crawler, Hunger, PlayerState, QueenMode, SideCell, SideDirtCells, Speed};
 use bevy::asset::AssetServer;
 use bevy::core_pipeline::clear_color::ClearColorConfig;
 use bevy::prelude::*;
@@ -13,12 +13,6 @@ pub fn sprite() -> Sprite {
         anchor: Anchor::TopLeft,
         ..Default::default()
     }
-}
-
-pub fn setup_player_state(mut commands: Commands) {
-    commands.insert_resource(PlayerState {
-        queen_breeding_cell: Some(SideCell::new(10, -10)),
-    });
 }
 
 pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>) {

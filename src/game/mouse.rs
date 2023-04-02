@@ -4,13 +4,14 @@ use bevy::render::camera::RenderTarget;
 use bevy::window::PrimaryWindow;
 
 #[derive(Resource, Deref, DerefMut)]
-pub struct MouseToWorld(SidePosition);
+pub struct MouseWorldPosition(SidePosition);
 
 pub fn setup(mut commands: Commands) {
-    commands.insert_resource(MouseToWorld(SidePosition::new(0f32, 0f32)));
+    commands.insert_resource(MouseWorldPosition(SidePosition::new(0f32, 0f32)));
 }
 
 pub fn mouse_to_world(
+    mut mouse_world_position: ResMut<MouseWorldPosition>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
 ) {
@@ -26,6 +27,7 @@ pub fn mouse_to_world(
         .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
         .map(|ray| ray.origin.truncate())
     {
-        eprintln!("World coords: {}/{}", world_position.x, world_position.y);
+        *mouse_world_position =
+            MouseWorldPosition(SidePosition::new(world_position.x, world_position.y));
     }
 }

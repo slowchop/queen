@@ -3,10 +3,13 @@ use bevy::prelude::*;
 use bevy::utils::HashMap;
 use dirt::Dirt;
 
+mod actions;
 mod camera;
 mod dirt;
 mod mouse;
+mod pathfinding;
 mod setup;
+mod ui;
 
 pub const SIDE_CELL_SIZE: u8 = 16;
 
@@ -14,6 +17,12 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
+        app.insert_resource(PlayerState {
+            queen_breeding_cell: Some(SideCell::new(10, -10)),
+            queen_mode: QueenMode::Breeding,
+            action_mode: ActionMode::Select,
+        });
+
         app.add_startup_systems((
             camera::setup,
             setup::setup_map,
@@ -22,8 +31,13 @@ impl Plugin for GamePlugin {
         ));
         app.add_systems((camera::control, camera::update).chain());
 
-        // TODO: After control camera
+        // TODO: camera::control -> mouse::mouse_to_world -> other...
         app.add_system(mouse::mouse_to_world);
+
+        app.add_startup_system(ui::setup);
+        app.add_system(ui::control);
+
+        app.add_systems((actions::left_mouse_click,));
     }
 
     fn name(&self) -> &str {
@@ -35,9 +49,27 @@ impl Plugin for GamePlugin {
     }
 }
 
-#[derive(Resource)]
+#[derive(Resource, Debug)]
 pub struct PlayerState {
     queen_breeding_cell: Option<SideCell>,
+    queen_mode: QueenMode,
+    action_mode: ActionMode,
+}
+
+#[derive(PartialEq, Debug)]
+pub enum QueenMode {
+    Working,
+    Breeding,
+}
+
+#[derive(PartialEq, Debug)]
+pub enum ActionMode {
+    Select,
+    // MoveCamera,
+    // ZoomIn,
+    // ZoomOut,
+    Dig,
+    SetBreedCell,
 }
 
 /// The side view of the world. The idea is that if we have time we can do a top down view on the

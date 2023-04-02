@@ -1,4 +1,4 @@
-use crate::input::{Action, ActionEvent, EventState, InputState};
+use crate::input::{ActionEvent, EventState, InputAction, InputState};
 use crate::state::{
     GameState, MenuItem, MenuItemDetails, MenuItemId, MenuState, StateConfig, StateDisplay,
 };
@@ -244,7 +244,7 @@ pub fn handle_action_events(
         }
 
         match event.action {
-            Action::Confirm => {
+            InputAction::Confirm => {
                 let Some(state) = menu.on_confirm_game_state() else {
                     warn!("Can't confirm menu, no next state.");
                     continue;
@@ -252,10 +252,10 @@ pub fn handle_action_events(
 
                 next_state.set(state);
             }
-            Action::Down => {
+            InputAction::Down => {
                 menu.select_next(1);
             }
-            Action::Up => {
+            InputAction::Up => {
                 menu.select_next(-1);
             }
             _ => {}
