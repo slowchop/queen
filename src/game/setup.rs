@@ -15,6 +15,7 @@ use bevy::utils::petgraph::prelude::*;
 use bevy::utils::petgraph::visit::IntoEdgeReferences;
 use bevy::utils::HashMap;
 use bevy_prototype_debug_lines::DebugLines;
+use pathfinding::num_traits::Signed;
 
 /// We want the transform position specified to be on the top left of the rendered sprite.
 pub fn sprite() -> Sprite {
@@ -45,10 +46,31 @@ pub fn setup_map(
             let cell_content = if y >= 0 {
                 CellContent::empty_air()
             } else {
-                if rand::random::<u8>() < 5 {
-                    CellContent::rock(true)
+                // We want a V shape around the origin so that ants are initially biased towards
+                // the middle and not dig new holes.
+                //
+                // e.g. the top row (at x == 0, y = -1) should have 5 very light dirt (e.g. 10).
+                // the next row should have 3 light dirt (e.g. 20), and so on.
+                //
+                // Also, x away from the origin should be light in the middle and gradually harder
+                // further away.
+                //
+                let forced_dirt_amount = (y.abs() * 10 + x.abs() * 30) as f32;
+                // Add a random amount of dirt.
+                let forced_dirt_amount = forced_dirt_amount + rand::random::<f32>() * 100.0 - 50.0;
+                let forced_dirt_amount = forced_dirt_amount as u64;
+
+                if forced_dirt_amount > 50u64 && forced_dirt_amount < 255u64 {
+                    info!("Forced dirt {} at {}, {}", forced_dirt_amount, x, y);
+                    CellContent::dirt(forced_dirt_amount as u8)
+                } else if y >= -2 {
+                    CellContent::dirt((255f32 - rand::random::<f32>() * 10.0) as u8)
                 } else {
-                    CellContent::random_dirt()
+                    if rand::random::<u8>() < 5 {
+                        CellContent::rock(true)
+                    } else {
+                        CellContent::random_dirt()
+                    }
                 }
             };
 

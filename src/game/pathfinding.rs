@@ -90,7 +90,8 @@ pub fn move_along_path(time: Res<Time>, mut query: Query<(&mut Path, &mut Transf
         let distance = (current_position - next_step_position).length();
 
         if distance <= step_distance {
-            // We're about to hit the next waypoint. Let's move there and remove it from the path, and then subtract it from the step_distance.
+            // We're about to hit the next waypoint. Let's move there and remove it from the path,
+            // and then subtract it from the step_distance.
             current_position = next_step_position;
             step_distance -= distance;
             transform.translation = current_position.extend(z);

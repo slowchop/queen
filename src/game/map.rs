@@ -32,6 +32,13 @@ impl CellContent {
         }
     }
 
+    pub fn dirt(amount: u8) -> Self {
+        Self {
+            underground: true,
+            cell_type: CellType::Dirt(amount),
+        }
+    }
+
     pub fn rock(underground: bool) -> Self {
         Self {
             underground,
