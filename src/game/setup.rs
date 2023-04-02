@@ -59,7 +59,6 @@ pub fn setup_map(
                 let forced_dirt_amount = forced_dirt_amount as u64;
 
                 if forced_dirt_amount > 50u64 && forced_dirt_amount < 255u64 {
-                    info!("Forced dirt {} at {}, {}", forced_dirt_amount, x, y);
                     CellContent::dirt(forced_dirt_amount as u8)
                 } else if y >= -5 {
                     CellContent::dirt(
@@ -89,7 +88,7 @@ pub fn setup_map(
                 };
                 entity.insert(sprite_bundle);
             }
-            let entity_id = commands.spawn((cell_content, side_cell)).id();
+            let entity_id = entity.insert((cell_content, side_cell)).id();
 
             side_map_pos_to_entities.insert(side_cell, entity_id);
             side_map_pos_to_cell.insert(side_cell, cell_content);
@@ -150,6 +149,7 @@ pub fn setup_queen(mut commands: Commands, asset_server: Res<AssetServer>) {
         Speed::default(),
         Hunger::default(),
         Assignment::None,
+        Path::None,
     ));
 }
 

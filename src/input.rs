@@ -141,7 +141,7 @@ pub fn process_keyboard_input(
             state: event_state,
         });
 
-        info!("Keyboard event: {:?}", event);
+        // info!("Keyboard event: {:?}", event);
     }
 }
 
@@ -187,6 +187,6 @@ pub fn process_mouse_input(
             state: event_state,
         });
 
-        info!("Mouse event: {:?}", event);
+        // info!("Mouse event: {:?}", event);
     }
 }

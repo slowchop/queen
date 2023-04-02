@@ -95,7 +95,8 @@ pub fn move_along_path(
         };
 
         let z = transform.translation.z;
-        let mut step_distance = 32f32 * time.delta_seconds();
+        // "Speed"
+        let mut step_distance = 16f32 * time.delta_seconds();
         let mut next_step_position = next_step.to_world_vec2();
         let mut current_position = transform.translation.truncate();
         let distance = (current_position - next_step_position).length();
@@ -113,7 +114,6 @@ pub fn move_along_path(
                 position: *next_step,
                 is_final: remaining_steps.len() == 1,
             };
-            info!(?event, "Visited node.");
             visited_event_writer.send(event);
 
             // Remove the current step from the path.

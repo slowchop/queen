@@ -6,7 +6,7 @@ use bevy::utils::HashMap;
 pub const SIDE_CELL_SIZE: u8 = 16;
 
 #[derive(Debug, Deref, DerefMut)]
-pub struct CellChangedEvent(SideIPos);
+pub struct CellChangedEvent(Entity);
 
 /// The side view of the world. The idea is that if we have time we can do a top down view on the
 /// surface of the world.
@@ -127,7 +127,6 @@ pub fn passive_dig_when_visiting_a_cell(
     mut cell_changed_writer: EventWriter<CellChangedEvent>,
 ) {
     for event in visited_node_reader.iter() {
-        info!(?event.creature_entity, "Got visiting node event");
         let Some(entity) = side_map_pos_to_entities.get(&event.position) else {
             warn!(?event, "No CellContent in side_map_pos_to_entities.");
             continue;
@@ -138,29 +137,33 @@ pub fn passive_dig_when_visiting_a_cell(
             continue;
         };
 
-        info!(?event.creature_entity, "Digging dirt");
-        cell_content.dig(255);
-        cell_changed_writer.send(CellChangedEvent(event.position));
+        cell_content.dig(50);
+
+        // TODO: "Move" the amount removed the the previous cell (and overflow outwards if that's not possible).
+
+        cell_changed_writer.send(CellChangedEvent(*entity));
     }
 }
 
 pub fn detect_cell_content_changes_and_update_rendering(
     mut commands: Commands,
-    mut side_map_pos_to_entities: ResMut<SideMapPosToEntities>,
+    asset_server: Res<AssetServer>,
     query: Query<(Entity, &SideIPos, &CellContent)>,
     mut cell_changed_reader: EventReader<CellChangedEvent>,
 ) {
-    for event in cell_changed_reader.iter() {
-        //     if !cell_content.is_empty() {
-        //         continue;
-        //     }
+    for cell_changed_event in cell_changed_reader.iter() {
+        let Ok((entity, side_map_pos, cell_content)) = query.get(**cell_changed_event) else {
+            warn!(?cell_changed_event, "Could not find entity in query");
+            continue;
+        };
 
-        if let Some(entity) = side_map_pos_to_entities.get(&*event) {
-            info!(?entity, "Despawning old entity");
-            commands.entity(*entity).despawn();
-            // side_map_pos_to_entities.remove(&*event);
+        let mut entity = commands.entity(entity);
+
+        if let Some(texture_path) = cell_content.texture_path() {
+            let image_handle: Handle<Image> = asset_server.load(texture_path);
+            entity.insert(image_handle);
         } else {
-            warn!(?event, "No entity to despawn");
+            entity.remove::<Handle<Image>>();
         }
     }
 }
