@@ -45,7 +45,7 @@ pub fn setup_map(
             let cell_content = if y >= 0 {
                 CellContent::empty_air()
             } else {
-                if rand::random::<u8>() < 50 {
+                if rand::random::<u8>() < 5 {
                     CellContent::rock(true)
                 } else {
                     CellContent::random_dirt()
@@ -108,35 +108,35 @@ pub fn setup_map(
         graph.edge_count()
     );
 
-    let goal = SideIPos::new(0, -20);
-    let result = astar(
-        &graph,
-        SideIPos::new(0, 0),
-        |finish| finish == goal,
-        |e| *e.weight(),
-        |z| (*z - *goal).as_vec2().length() as u64,
-    );
-    dbg!(&result);
-
-    // Draws all edges.
-    for edge in graph.edge_references() {
-        let a = edge.source().to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
-        let b = edge.target().to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
-        // debug_lines.line_colored(a.extend(0f32), b.extend(0f32), 100.0, Color::WHITE);
-    }
-
-    // Draw debug lines for the found path.
-    if let Some((_, path)) = result {
-        for (a, b) in path.windows(2).map(|w| (w[0], w[1])) {
-            let a = a.to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
-            let b = b.to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
-            debug_lines.line_colored(a.extend(0f32), b.extend(0f32), 100.0, Color::LIME_GREEN);
-        }
-    }
+    // let goal = SideIPos::new(0, -20);
+    // let result = astar(
+    //     &graph,
+    //     SideIPos::new(0, 0),
+    //     |finish| finish == goal,
+    //     |e| *e.weight(),
+    //     |z| (*z - *goal).as_vec2().length() as u64,
+    // );
+    // dbg!(&result);
+    //
+    // // Draws all edges.
+    // for edge in graph.edge_references() {
+    //     let a = edge.source().to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
+    //     let b = edge.target().to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
+    //     // debug_lines.line_colored(a.extend(0f32), b.extend(0f32), 100.0, Color::WHITE);
+    // }
+    //
+    // // Draw debug lines for the found path.
+    // if let Some((_, path)) = result {
+    //     for (a, b) in path.windows(2).map(|w| (w[0], w[1])) {
+    //         let a = a.to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
+    //         let b = b.to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
+    //         debug_lines.line_colored(a.extend(0f32), b.extend(0f32), 100.0, Color::LIME_GREEN);
+    //     }
+    // }
 
     // Finally own the dirt map and set the resource.
     commands.insert_resource(SideMapPosToEntities(side_map_pos_to_entities));
-    commands.insert_resource(SideMapGraph(graph));
+    commands.insert_resource(SideMapGraph::from(graph));
 }
 
 pub fn setup_queen(mut commands: Commands, asset_server: Res<AssetServer>) {
