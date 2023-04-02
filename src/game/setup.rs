@@ -1,9 +1,10 @@
 use crate::game::camera::CameraFocus;
-use crate::game::dirt::CellContent;
 use crate::game::jobs::Assignment;
-use crate::game::pathfinding::Path;
+use crate::game::map::CellContent;
+use crate::game::pathfinding::{Path, SideMapGraph};
+use crate::game::positions::SideIPos;
 use crate::game::{
-    Crawler, Hunger, PlayerState, QueenMode, SideCell, SideDirtCells, Speed, SIDE_CELL_SIZE,
+    Crawler, Hunger, PlayerState, QueenMode, SideMapPosToEntities, Speed, SIDE_CELL_SIZE,
 };
 use bevy::asset::AssetServer;
 use bevy::core_pipeline::clear_color::ClearColorConfig;
@@ -29,26 +30,30 @@ pub fn setup_map(
     mut debug_lines: ResMut<DebugLines>,
 ) {
     let mut side_map_pos_to_entities = HashMap::with_capacity(1_000);
+
+    // This is a temporary structure to help us build the graph for this system only.
+    // Other systems will use a Query to look up the Cell entity via SideMapPosToEntities.
     let mut side_map_pos_to_cell = HashMap::with_capacity(1_000);
 
-    // let mut graph = Graph::<CellContent, ()>::with_capacity(1_000, 4_000);
-    // let mut graph_positions = HashMap::with_capacity(1_000);
-
-    let mut graph = UnGraphMap::<SideCell, u64>::with_capacity(1_000, 4_000);
+    let mut graph = UnGraphMap::<SideIPos, u64>::with_capacity(1_000, 4_000);
 
     // Create dirt from Y - 1 and downwards with a width of 20.
     // Y 0 or higher is the surface, so make Dirt::empty()
     let width = 20;
     for y in -20..20 {
         for x in -width / 2..width / 2 {
-            let cell = if y >= 0 {
+            let cell_content = if y >= 0 {
                 CellContent::empty_air()
             } else {
-                CellContent::random_dirt()
+                if rand::random::<u8>() < 50 {
+                    CellContent::rock(true)
+                } else {
+                    CellContent::random_dirt()
+                }
             };
 
-            let side_cell = SideCell::new(x, y);
-            let texture_path = cell.texture_path();
+            let side_cell = SideIPos::new(x, y);
+            let texture_path = cell_content.texture_path();
             let transform = Transform::from_translation(side_cell.to_world_vec3());
 
             let mut entity = commands.spawn_empty();
@@ -62,10 +67,10 @@ pub fn setup_map(
                 };
                 entity.insert(sprite_bundle);
             }
-            let entity_id = commands.spawn((cell)).id();
+            let entity_id = commands.spawn(cell_content).id();
 
             side_map_pos_to_entities.insert(side_cell, entity_id);
-            side_map_pos_to_cell.insert(side_cell, cell);
+            side_map_pos_to_cell.insert(side_cell, cell_content);
 
             graph.add_node(side_cell);
         }
@@ -103,10 +108,10 @@ pub fn setup_map(
         graph.edge_count()
     );
 
-    let goal = SideCell::new(0, -20);
+    let goal = SideIPos::new(0, -20);
     let result = astar(
         &graph,
-        SideCell::new(0, 0),
+        SideIPos::new(0, 0),
         |finish| finish == goal,
         |e| *e.weight(),
         |z| (*z - *goal).as_vec2().length() as u64,
@@ -129,10 +134,9 @@ pub fn setup_map(
         }
     }
 
-    // todo!();
-
     // Finally own the dirt map and set the resource.
-    commands.insert_resource(SideDirtCells(side_map_pos_to_entities));
+    commands.insert_resource(SideMapPosToEntities(side_map_pos_to_entities));
+    commands.insert_resource(SideMapGraph(graph));
 }
 
 pub fn setup_queen(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -172,7 +176,7 @@ pub fn setup_ants(mut commands: Commands, asset_server: Res<AssetServer>) {
             Speed::default(),
             Hunger::default(),
             Assignment::None,
-            Path::NeedsPath(SideCell::new(0, -20)),
+            Path::NeedsPath(SideIPos::new(0, -20)),
         ));
     }
 }

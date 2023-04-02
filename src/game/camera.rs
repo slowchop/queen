@@ -1,4 +1,4 @@
-use crate::game::SidePosition;
+use crate::game::positions::SidePosition;
 use crate::input::{InputAction, InputStates};
 use bevy::core_pipeline::clear_color::ClearColorConfig;
 use bevy::prelude::*;

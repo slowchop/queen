@@ -32,6 +32,13 @@ impl CellContent {
         }
     }
 
+    pub fn rock(underground: bool) -> Self {
+        Self {
+            underground,
+            cell_type: CellType::Rock,
+        }
+    }
+
     pub fn dig(&mut self) {
         if let CellType::Dirt(amount) = self.cell_type {
             if amount > 0 {

@@ -1,15 +1,17 @@
 use bevy::core_pipeline::clear_color::ClearColorConfig;
 use bevy::prelude::*;
 use bevy::utils::HashMap;
-use dirt::CellContent;
 use jobs::Jobs;
+use map::CellContent;
+use positions::SideIPos;
 
 mod actions;
 mod camera;
-mod dirt;
 mod jobs;
+mod map;
 mod mouse;
 mod pathfinding;
+mod positions;
 mod setup;
 mod ui;
 
@@ -20,7 +22,7 @@ pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(PlayerState {
-            queen_breeding_cell: Some(SideCell::new(10, -10)),
+            queen_breeding_cell: Some(SideIPos::new(10, -10)),
             queen_mode: QueenMode::Breeding,
             action_mode: ActionMode::Select,
         });
@@ -56,7 +58,7 @@ impl Plugin for GamePlugin {
 
 #[derive(Resource, Debug)]
 pub struct PlayerState {
-    queen_breeding_cell: Option<SideCell>,
+    queen_breeding_cell: Option<SideIPos>,
     queen_mode: QueenMode,
     action_mode: ActionMode,
 }
@@ -80,81 +82,7 @@ pub enum ActionMode {
 /// The side view of the world. The idea is that if we have time we can do a top down view on the
 /// surface of the world.
 #[derive(Resource)]
-pub struct SideDirtCells(HashMap<SideCell, Entity>);
-
-fn morton_encode(x: i32, y: i32) -> i64 {
-    let mut z = 0i64;
-    let x = x as i64;
-    let y = y as i64;
-
-    for i in 0..32 {
-        z |= ((x >> i) & 1) << (2 * i);
-        z |= ((y >> i) & 1) << (2 * i + 1);
-    }
-
-    z
-}
-
-/// The side position of a fixed position, e.g. a dirt cell.
-#[derive(Component, Deref, DerefMut, Eq, PartialEq, Hash, Clone, Copy, Debug)]
-pub struct SideCell(IVec2);
-
-impl SideCell {
-    pub fn sides(&self) -> [SideCell; 4] {
-        [
-            SideCell::new(self.0.x + 1, self.0.y),
-            SideCell::new(self.0.x - 1, self.0.y),
-            SideCell::new(self.0.x, self.0.y + 1),
-            SideCell::new(self.0.x, self.0.y - 1),
-        ]
-    }
-}
-
-impl SideCell {
-    pub fn new(x: i32, y: i32) -> Self {
-        Self(IVec2::new(x, y))
-    }
-
-    pub fn to_world_vec2(&self) -> Vec2 {
-        Vec2::new(
-            self.0.x as f32 * SIDE_CELL_SIZE as f32,
-            self.0.y as f32 * SIDE_CELL_SIZE as f32,
-        )
-    }
-
-    pub fn to_world_vec3(&self) -> Vec3 {
-        self.to_world_vec2().extend(0.0)
-    }
-}
-
-impl PartialOrd<Self> for SideCell {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for SideCell {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        morton_encode(self.0.x, self.0.y).cmp(&morton_encode(other.0.x, other.0.y))
-    }
-}
-
-/// The side position of a floating point position. Used for crawler positions.
-#[derive(Deref, DerefMut, Copy, Clone, Debug)]
-pub struct SidePosition(Vec2);
-
-impl SidePosition {
-    pub fn new(x: f32, y: f32) -> Self {
-        Self(Vec2::new(x, y))
-    }
-
-    pub fn to_cell(&self) -> SideCell {
-        SideCell::new(
-            (self.0.x / SIDE_CELL_SIZE as f32).floor() as i32,
-            (self.0.y / SIDE_CELL_SIZE as f32).floor() as i32,
-        )
-    }
-}
+pub struct SideMapPosToEntities(HashMap<SideIPos, Entity>);
 
 /// A creature that crawls around the world and uses pathfinding.
 ///

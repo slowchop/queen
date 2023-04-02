@@ -1,4 +1,4 @@
-use crate::game::SidePosition;
+use crate::game::positions::SidePosition;
 use bevy::prelude::*;
 use bevy::render::camera::RenderTarget;
 use bevy::window::PrimaryWindow;
