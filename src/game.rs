@@ -6,6 +6,7 @@ mod mouse;
 mod pathfinding;
 mod plugin;
 mod positions;
+mod queen;
 mod setup;
 mod ui;
 

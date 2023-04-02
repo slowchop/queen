@@ -36,6 +36,24 @@ pub enum Path {
     Progress(PathProgress),
 }
 
+impl Path {
+    pub fn set_target(&mut self, target: SideIPos) {
+        *self = Path::NeedsPath(target);
+    }
+
+    pub fn cancel(&mut self) {
+        *self = Path::None;
+    }
+
+    pub fn is_moving(&self) -> bool {
+        matches!(self, Path::Progress(_))
+    }
+
+    pub fn is_none(&self) -> bool {
+        matches!(self, Path::None)
+    }
+}
+
 pub struct PathProgress {
     remaining_steps: Vec<SideIPos>,
 }
@@ -50,7 +68,7 @@ pub fn needs_path(
             continue;
         };
 
-        let start = SideIPos::from(&transform.translation);
+        let start = SideIPos::from(transform);
 
         let result = astar(
             &**graph,

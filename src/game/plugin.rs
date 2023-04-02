@@ -1,8 +1,10 @@
 use crate::game;
+use crate::game::actions::SetQueenLayingPositionEvent;
 use crate::game::jobs::Jobs;
 use crate::game::map::CellChangedEvent;
 use crate::game::pathfinding::VisitedNodeEvent;
 use crate::game::positions::SideIPos;
+use crate::game::queen::{Queen, QueenMode};
 use crate::game::{actions, camera, mouse, setup, ui};
 use bevy::app::{App, Plugin};
 use bevy::prelude::*;
@@ -14,10 +16,11 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<VisitedNodeEvent>();
         app.add_event::<CellChangedEvent>();
+        app.add_event::<SetQueenLayingPositionEvent>();
 
         app.insert_resource(PlayerState {
-            queen_breeding_cell: Some(SideIPos::new(10, -10)),
-            queen_mode: QueenMode::Breeding,
+            queen_laying_position: Some(SideIPos::new(10, -10)),
+            queen_mode: QueenMode::Laying,
             action_mode: ActionMode::Select,
         });
 
@@ -38,12 +41,16 @@ impl Plugin for GamePlugin {
         app.add_startup_system(ui::setup);
         app.add_system(ui::control);
 
-        app.add_systems((actions::left_mouse_click,));
+        app.add_systems((actions::primary_mouse_click,));
         app.add_systems((
             game::pathfinding::needs_path,
             game::pathfinding::move_along_path,
             game::map::passive_dig_when_visiting_a_cell,
             game::map::detect_cell_content_changes_and_update_rendering,
+            game::queen::set_queen_laying_position,
+            game::queen::stop_queen_pathfinding_when_laying_target_changed.run_if(Queen::is_laying),
+            game::queen::ensure_path_queen_to_laying_spot.run_if(Queen::is_laying),
+            game::queen::lay_eggs.run_if(Queen::is_laying),
         ));
     }
 
@@ -58,15 +65,9 @@ impl Plugin for GamePlugin {
 
 #[derive(Resource, Debug)]
 pub struct PlayerState {
-    pub queen_breeding_cell: Option<SideIPos>,
+    pub queen_laying_position: Option<SideIPos>,
     pub queen_mode: QueenMode,
     pub action_mode: ActionMode,
-}
-
-#[derive(PartialEq, Debug)]
-pub enum QueenMode {
-    Working,
-    Breeding,
 }
 
 #[derive(PartialEq, Debug)]
@@ -76,7 +77,7 @@ pub enum ActionMode {
     // ZoomIn,
     // ZoomOut,
     Dig,
-    SetBreedCell,
+    SetLayingPosition,
 }
 
 /// A creature that crawls around the world and uses pathfinding.

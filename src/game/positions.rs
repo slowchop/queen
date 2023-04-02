@@ -1,7 +1,7 @@
 use crate::game;
 use crate::game::map::SIDE_CELL_SIZE;
 use bevy::math::{IVec2, Vec2, Vec3};
-use bevy::prelude::{Component, Deref, DerefMut};
+use bevy::prelude::*;
 
 /// The side position of a fixed position, e.g. a dirt cell.
 #[derive(Component, Deref, DerefMut, Eq, PartialEq, Hash, Clone, Copy, Debug)]
@@ -41,6 +41,12 @@ impl From<&Vec3> for SideIPos {
             (vec.x / SIDE_CELL_SIZE as f32).floor() as i32,
             (vec.y / SIDE_CELL_SIZE as f32).floor() as i32,
         )
+    }
+}
+
+impl From<&Transform> for SideIPos {
+    fn from(transform: &Transform) -> Self {
+        Self::from(&transform.translation)
     }
 }
 

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy::render::camera::RenderTarget;
 use bevy::window::PrimaryWindow;
 
-#[derive(Resource, Deref, DerefMut, Copy, Clone)]
+#[derive(Resource, Deref, DerefMut, Copy, Clone, Debug)]
 pub struct MouseWorldPosition(SidePosition);
 
 pub fn setup(mut commands: Commands) {

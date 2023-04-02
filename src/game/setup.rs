@@ -2,8 +2,9 @@ use crate::game::camera::CameraFocus;
 use crate::game::jobs::Assignment;
 use crate::game::map::{CellContent, SideMapPosToEntities, SIDE_CELL_SIZE};
 use crate::game::pathfinding::{Path, SideMapGraph};
-use crate::game::plugin::{Crawler, Hunger, PlayerState, QueenMode, Speed};
+use crate::game::plugin::{Crawler, Hunger, PlayerState, Speed};
 use crate::game::positions::SideIPos;
+use crate::game::queen::{Queen, QueenMode};
 use bevy::asset::AssetServer;
 use bevy::core_pipeline::clear_color::ClearColorConfig;
 use bevy::prelude::*;
@@ -145,6 +146,7 @@ pub fn setup_queen(mut commands: Commands, asset_server: Res<AssetServer>) {
     };
     commands.spawn((
         sprite_bundle,
+        Queen::default(),
         Crawler,
         Speed::default(),
         Hunger::default(),
