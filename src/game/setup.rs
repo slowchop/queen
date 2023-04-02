@@ -9,37 +9,46 @@ use bevy::asset::AssetServer;
 use bevy::core_pipeline::clear_color::ClearColorConfig;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
-use bevy::utils::petgraph::matrix_graph::MatrixGraph;
-use bevy::utils::petgraph::Graph;
+use bevy::utils::petgraph::algo::astar;
+use bevy::utils::petgraph::prelude::*;
+use bevy::utils::petgraph::visit::IntoEdgeReferences;
 use bevy::utils::HashMap;
+use bevy_prototype_debug_lines::DebugLines;
 
 /// We want the transform position specified to be on the top left of the rendered sprite.
 pub fn sprite() -> Sprite {
     Sprite {
-        anchor: Anchor::TopLeft,
+        anchor: Anchor::BottomLeft,
         ..Default::default()
     }
 }
 
-pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let mut side_map_dirt = HashMap::with_capacity(1_000);
-    let mut graph = Graph::<CellContent, ()>::with_capacity(1_000, 4_000);
+pub fn setup_map(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut debug_lines: ResMut<DebugLines>,
+) {
+    let mut side_map_pos_to_entities = HashMap::with_capacity(1_000);
+    let mut side_map_pos_to_cell = HashMap::with_capacity(1_000);
 
-    let mut graph_positions = HashMap::with_capacity(1_000);
+    // let mut graph = Graph::<CellContent, ()>::with_capacity(1_000, 4_000);
+    // let mut graph_positions = HashMap::with_capacity(1_000);
+
+    let mut graph = UnGraphMap::<SideCell, u64>::with_capacity(1_000, 4_000);
 
     // Create dirt from Y - 1 and downwards with a width of 20.
     // Y 0 or higher is the surface, so make Dirt::empty()
     let width = 20;
     for y in -20..20 {
         for x in -width / 2..width / 2 {
-            let dirt = if y >= 0 {
+            let cell = if y >= 0 {
                 CellContent::empty_air()
             } else {
                 CellContent::random_dirt()
             };
 
             let side_cell = SideCell::new(x, y);
-            let texture_path = dirt.texture_path();
+            let texture_path = cell.texture_path();
             let transform = Transform::from_translation(side_cell.to_world_vec3());
 
             let mut entity = commands.spawn_empty();
@@ -53,17 +62,77 @@ pub fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>) {
                 };
                 entity.insert(sprite_bundle);
             }
-            let entity_id = commands.spawn((dirt)).id();
+            let entity_id = commands.spawn((cell)).id();
 
-            side_map_dirt.insert(side_cell, entity_id);
+            side_map_pos_to_entities.insert(side_cell, entity_id);
+            side_map_pos_to_cell.insert(side_cell, cell);
 
-            let node_id = graph.add_node(dirt);
-            graph_positions.insert(side_cell, node_id);
+            graph.add_node(side_cell);
         }
     }
 
+    // Work through each graph node and add edges to the nodes above, below, left and right.
+    // for (side_cell, node_id) in graph_positions.iter() {
+    //     for neighbour in side_cell.sides() {
+    //         if let Some(other_node_id) = graph_positions.get(&neighbour) {
+    //             graph.add_edge(*node_id, *other_node_id, ());
+    //         }
+    //     }
+    // }
+
+    for (pos, cell) in side_map_pos_to_cell.iter() {
+        let Some(a_weight) = cell.weight() else {
+            continue;
+        };
+
+        for neighbour in pos.sides() {
+            if let Some(other_cell) = side_map_pos_to_cell.get(&neighbour) {
+                let Some(b_weight) = other_cell.weight() else {
+                    continue;
+                };
+
+                let weight = a_weight as u64 + b_weight as u64;
+                graph.add_edge(*pos, neighbour, weight as u64);
+            }
+        }
+    }
+
+    println!(
+        "Graph has {} nodes and {} edges",
+        graph.node_count(),
+        graph.edge_count()
+    );
+
+    let goal = SideCell::new(0, -20);
+    let result = astar(
+        &graph,
+        SideCell::new(0, 0),
+        |finish| finish == goal,
+        |e| *e.weight(),
+        |z| (*z - *goal).as_vec2().length() as u64,
+    );
+    dbg!(&result);
+
+    // Draws all edges.
+    for edge in graph.edge_references() {
+        let a = edge.source().to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
+        let b = edge.target().to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
+        // debug_lines.line_colored(a.extend(0f32), b.extend(0f32), 100.0, Color::WHITE);
+    }
+
+    // Draw debug lines for the found path.
+    if let Some((_, path)) = result {
+        for (a, b) in path.windows(2).map(|w| (w[0], w[1])) {
+            let a = a.to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
+            let b = b.to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
+            debug_lines.line_colored(a.extend(0f32), b.extend(0f32), 100.0, Color::LIME_GREEN);
+        }
+    }
+
+    // todo!();
+
     // Finally own the dirt map and set the resource.
-    commands.insert_resource(SideDirtCells(side_map_dirt));
+    commands.insert_resource(SideDirtCells(side_map_pos_to_entities));
 }
 
 pub fn setup_queen(mut commands: Commands, asset_server: Res<AssetServer>) {

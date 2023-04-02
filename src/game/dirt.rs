@@ -58,6 +58,17 @@ impl CellContent {
         }
     }
 
+    // A weight of zero breaks the pathfinding algorithm, so we use u16 and add 1.
+    pub fn weight(&self) -> Option<u16> {
+        if self.is_empty() {
+            Some(1)
+        } else if self.is_rock() {
+            None
+        } else {
+            Some(self.amount_left() as u16 + 1)
+        }
+    }
+
     pub fn texture_path(&self) -> Option<String> {
         if self.is_empty() {
             None
