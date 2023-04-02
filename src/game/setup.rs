@@ -1,11 +1,9 @@
 use crate::game::camera::CameraFocus;
 use crate::game::jobs::Assignment;
-use crate::game::map::CellContent;
+use crate::game::map::{CellContent, SideMapPosToEntities, SIDE_CELL_SIZE};
 use crate::game::pathfinding::{Path, SideMapGraph};
+use crate::game::plugin::{Crawler, Hunger, PlayerState, QueenMode, Speed};
 use crate::game::positions::SideIPos;
-use crate::game::{
-    Crawler, Hunger, PlayerState, QueenMode, SideMapPosToEntities, Speed, SIDE_CELL_SIZE,
-};
 use bevy::asset::AssetServer;
 use bevy::core_pipeline::clear_color::ClearColorConfig;
 use bevy::prelude::*;
@@ -28,7 +26,7 @@ pub fn sprite() -> Sprite {
 pub fn setup_map(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut debug_lines: ResMut<DebugLines>,
+    // mut debug_lines: ResMut<DebugLines>,
 ) {
     let mut side_map_pos_to_entities = HashMap::with_capacity(1_000);
 
@@ -91,7 +89,7 @@ pub fn setup_map(
                 };
                 entity.insert(sprite_bundle);
             }
-            let entity_id = commands.spawn(cell_content).id();
+            let entity_id = commands.spawn((cell_content, side_cell)).id();
 
             side_map_pos_to_entities.insert(side_cell, entity_id);
             side_map_pos_to_cell.insert(side_cell, cell_content);
@@ -99,15 +97,6 @@ pub fn setup_map(
             graph.add_node(side_cell);
         }
     }
-
-    // Work through each graph node and add edges to the nodes above, below, left and right.
-    // for (side_cell, node_id) in graph_positions.iter() {
-    //     for neighbour in side_cell.sides() {
-    //         if let Some(other_node_id) = graph_positions.get(&neighbour) {
-    //             graph.add_edge(*node_id, *other_node_id, ());
-    //         }
-    //     }
-    // }
 
     for (pos, cell) in side_map_pos_to_cell.iter() {
         let Some(a_weight) = cell.weight() else {
@@ -132,35 +121,19 @@ pub fn setup_map(
         graph.edge_count()
     );
 
-    // let goal = SideIPos::new(0, -20);
-    // let result = astar(
-    //     &graph,
-    //     SideIPos::new(0, 0),
-    //     |finish| finish == goal,
-    //     |e| *e.weight(),
-    //     |z| (*z - *goal).as_vec2().length() as u64,
-    // );
-    // dbg!(&result);
-    //
     // // Draws all edges.
     // for edge in graph.edge_references() {
     //     let a = edge.source().to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
     //     let b = edge.target().to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
     //     // debug_lines.line_colored(a.extend(0f32), b.extend(0f32), 100.0, Color::WHITE);
     // }
-    //
-    // // Draw debug lines for the found path.
-    // if let Some((_, path)) = result {
-    //     for (a, b) in path.windows(2).map(|w| (w[0], w[1])) {
-    //         let a = a.to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
-    //         let b = b.to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
-    //         debug_lines.line_colored(a.extend(0f32), b.extend(0f32), 100.0, Color::LIME_GREEN);
-    //     }
-    // }
 
     // Finally own the dirt map and set the resource.
-    commands.insert_resource(SideMapPosToEntities(side_map_pos_to_entities));
+    commands.insert_resource(SideMapPosToEntities::from(side_map_pos_to_entities));
     commands.insert_resource(SideMapGraph::from(graph));
+
+    // Explicitly drop the temporary side_map_pos_to_cell, just as a reminder that it's temporary.
+    drop(side_map_pos_to_cell);
 }
 
 pub fn setup_queen(mut commands: Commands, asset_server: Res<AssetServer>) {

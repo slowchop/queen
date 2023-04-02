@@ -1,9 +1,16 @@
+use crate::game::map::SIDE_CELL_SIZE;
 use crate::game::positions::SideIPos;
-use crate::game::SIDE_CELL_SIZE;
 use bevy::prelude::*;
 use bevy::utils::petgraph::algo::astar;
 use bevy::utils::petgraph::prelude::{EdgeRef, UnGraphMap};
 use bevy_prototype_debug_lines::DebugLines;
+
+#[derive(Debug)]
+pub struct VisitedNodeEvent {
+    pub creature_entity: Entity,
+    pub position: SideIPos,
+    pub is_final: bool,
+}
 
 #[derive(Resource, Deref, DerefMut, Default)]
 pub struct SideMapGraph(UnGraphMap<SideIPos, u64>);
@@ -69,8 +76,12 @@ pub fn needs_path(
     }
 }
 
-pub fn move_along_path(time: Res<Time>, mut query: Query<(&mut Path, &mut Transform)>) {
-    for (mut path, mut transform) in query.iter_mut() {
+pub fn move_along_path(
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut Path, &mut Transform)>,
+    mut visited_event_writer: EventWriter<VisitedNodeEvent>,
+) {
+    for (entity, mut path, mut transform) in query.iter_mut() {
         let Path::Progress(progress) = &mut *path else {
             continue;
         };
@@ -95,6 +106,15 @@ pub fn move_along_path(time: Res<Time>, mut query: Query<(&mut Path, &mut Transf
             current_position = next_step_position;
             step_distance -= distance;
             transform.translation = current_position.extend(z);
+
+            // Emit an event for the visited node.
+            let event = VisitedNodeEvent {
+                creature_entity: entity,
+                position: *next_step,
+                is_final: remaining_steps.len() == 1,
+            };
+            info!(?event, "Visited node.");
+            visited_event_writer.send(event);
 
             // Remove the current step from the path.
             remaining_steps.remove(0);

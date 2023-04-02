@@ -1,5 +1,5 @@
 use crate::game;
-use crate::game::SIDE_CELL_SIZE;
+use crate::game::map::SIDE_CELL_SIZE;
 use bevy::math::{IVec2, Vec2, Vec3};
 use bevy::prelude::{Component, Deref, DerefMut};
 

@@ -1,4 +1,4 @@
-use crate::game::{ActionMode, PlayerState, QueenMode};
+use crate::game::plugin::{ActionMode, PlayerState, QueenMode};
 use bevy::prelude::*;
 use bevy_egui::egui::style::Spacing;
 use bevy_egui::egui::FontFamily::Proportional;

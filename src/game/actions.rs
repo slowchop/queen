@@ -1,6 +1,6 @@
 use crate::game::jobs::{Job, Jobs};
 use crate::game::mouse::MouseWorldPosition;
-use crate::game::{ActionMode, PlayerState};
+use crate::game::plugin::{ActionMode, PlayerState};
 use crate::input::{InputAction, InputStates};
 use bevy::prelude::Res;
 use bevy::prelude::*;
