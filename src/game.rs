@@ -1,11 +1,13 @@
 use bevy::core_pipeline::clear_color::ClearColorConfig;
 use bevy::prelude::*;
 use bevy::utils::HashMap;
-use dirt::Dirt;
+use dirt::CellContent;
+use jobs::Jobs;
 
 mod actions;
 mod camera;
 mod dirt;
+mod jobs;
 mod mouse;
 mod pathfinding;
 mod setup;
@@ -23,10 +25,13 @@ impl Plugin for GamePlugin {
             action_mode: ActionMode::Select,
         });
 
+        app.insert_resource(Jobs::default());
+
         app.add_startup_systems((
             camera::setup,
             setup::setup_map,
             setup::setup_queen,
+            setup::setup_ants,
             mouse::setup,
         ));
         app.add_systems((camera::control, camera::update).chain());
@@ -99,12 +104,19 @@ impl SideCell {
 }
 
 /// The side position of a floating point position. Used for crawler positions.
-#[derive(Deref, DerefMut)]
+#[derive(Deref, DerefMut, Copy, Clone, Debug)]
 pub struct SidePosition(Vec2);
 
 impl SidePosition {
     pub fn new(x: f32, y: f32) -> Self {
         Self(Vec2::new(x, y))
+    }
+
+    pub fn to_cell(&self) -> SideCell {
+        SideCell::new(
+            (self.0.x / SIDE_CELL_SIZE as f32).floor() as i32,
+            (self.0.y / SIDE_CELL_SIZE as f32).floor() as i32,
+        )
     }
 }
 

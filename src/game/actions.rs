@@ -1,3 +1,4 @@
+use crate::game::jobs::{Job, Jobs};
 use crate::game::mouse::MouseWorldPosition;
 use crate::game::{ActionMode, PlayerState};
 use crate::input::{InputAction, InputStates};
@@ -8,6 +9,7 @@ pub fn left_mouse_click(
     mouse_world_position: Res<MouseWorldPosition>,
     input_state: Res<InputStates>,
     mut player_state: ResMut<PlayerState>,
+    mut jobs: ResMut<Jobs>,
 ) {
     if !input_state.just_pressed(InputAction::PrimaryAction) {
         return;
@@ -16,6 +18,7 @@ pub fn left_mouse_click(
     match &player_state.action_mode {
         ActionMode::Dig => {
             //
+            jobs.insert(mouse_world_position.to_cell(), Job::Dig);
         }
         _ => warn!(
             "TODO left_mouse_click: action_mode: {:?}",

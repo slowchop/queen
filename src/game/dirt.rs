@@ -1,32 +1,69 @@
 use bevy::prelude::{Component, Deref, DerefMut};
 
-/// A dirt block. The u8 is the amount of dirt. 0 is empty.
-#[derive(Component, Deref, DerefMut)]
-pub struct Dirt(u8);
+#[derive(Copy, Clone)]
+pub enum CellType {
+    // 0 means there's still one amount of dirt left before it's empty.
+    Dirt(u8),
+    Empty,
+    // Impassable
+    Rock,
+}
 
-impl Dirt {
-    pub fn empty() -> Self {
-        Self(0)
+/// A dirt block. The u8 is the amount of dirt. 0 is empty.
+#[derive(Component, Copy, Clone)]
+pub struct CellContent {
+    /// Underground means creatures can walk on walls.
+    underground: bool,
+    cell_type: CellType,
+}
+
+impl CellContent {
+    pub fn empty_air() -> Self {
+        Self {
+            underground: false,
+            cell_type: CellType::Empty,
+        }
     }
 
-    pub fn random() -> Self {
-        Self(rand::random::<u8>())
+    pub fn random_dirt() -> Self {
+        Self {
+            underground: true,
+            cell_type: CellType::Dirt(rand::random::<u8>()),
+        }
     }
 
     pub fn dig(&mut self) {
-        if self.0 > 0 {
-            self.0 -= 1;
+        if let CellType::Dirt(amount) = self.cell_type {
+            if amount > 0 {
+                self.cell_type = CellType::Dirt(amount - 1);
+            } else {
+                self.cell_type = CellType::Empty;
+            }
         }
     }
 
     pub fn is_empty(&self) -> bool {
-        self.0 == 0
+        matches!(self.cell_type, CellType::Empty)
+    }
+
+    pub fn is_rock(&self) -> bool {
+        matches!(self.cell_type, CellType::Rock)
+    }
+
+    pub fn amount_left(&self) -> u8 {
+        if let CellType::Dirt(amount) = self.cell_type {
+            amount
+        } else {
+            0
+        }
     }
 
     pub fn texture_path(&self) -> Option<String> {
         if self.is_empty() {
             None
-        } else if self.0 > 127 {
+        } else if self.is_rock() {
+            Some("dirt/rock.png".to_string())
+        } else if self.amount_left() > 127 {
             Some("dirt/full.png".to_string())
         } else {
             Some("dirt/half.png".to_string())
