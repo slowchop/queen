@@ -25,7 +25,7 @@ impl Default for CameraFocus {
     fn default() -> Self {
         Self {
             target: SidePosition::new(0f32, 0f32),
-            zoom: ZoomLevel(2),
+            zoom: ZoomLevel(1),
         }
     }
 }

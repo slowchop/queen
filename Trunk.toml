@@ -1,3 +1,7 @@
+[build]
+public_url = "./"
+release = true
+
 [[hooks]]
 stage = "build"
 command = "mkdir"

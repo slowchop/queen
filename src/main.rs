@@ -106,6 +106,8 @@ fn bevy_plugins(settings: &GameSettings) -> PluginGroupBuilder {
                 position: WindowPosition::Centered(MonitorSelection::Current),
                 resolution: WindowResolution::new(settings.resolution.0, settings.resolution.1),
                 mode: settings.window_mode,
+                fit_canvas_to_parent: true,
+                resizable: true,
                 ..Default::default()
             }),
             ..Default::default()

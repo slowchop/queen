@@ -56,12 +56,6 @@ pub fn control(
                 ui.vertical(|ui| {
                     ui.heading("Actions");
                     ui.horizontal_centered(|ui| {
-                        // ui.button("Camera");
-                        // ui.button("Dig");
-                        // ui.button("Set Breeding Spot");
-                        // ui.button("Set food storage");
-                        // ui.button("Set nest");
-
                         ui.selectable_value(action_mode, ActionMode::Select, "Select");
                         ui.selectable_value(
                             action_mode,

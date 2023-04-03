@@ -65,7 +65,9 @@ pub fn setup_map(
                 let forced_dirt_amount = (y.abs() * 10 + x.abs() * 30) as f32;
                 // Add a random amount of dirt.
                 let forced_dirt_amount = forced_dirt_amount + rand::random::<f32>() * 100.0 - 50.0;
-                let forced_dirt_amount = forced_dirt_amount as u64;
+
+                // limit to 0-255 as u64
+                let forced_dirt_amount = forced_dirt_amount.max(0.0).min(255.0) as u64;
 
                 if forced_dirt_amount > 50u64 && forced_dirt_amount < 255u64 {
                     CellContent::dirt(forced_dirt_amount as u8)

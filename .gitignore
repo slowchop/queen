@@ -2,3 +2,7 @@
 /dist
 .netlify
 .idea
+release.zip
+
+# Krita backup files
+**/*~

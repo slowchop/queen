@@ -107,7 +107,7 @@ pub fn grow_and_lay_eggs(
         }
 
         queen.egg_progress += time.delta_seconds();
-        info!("Egg progress: {}", queen.egg_progress);
+        // info!("Egg progress: {}", queen.egg_progress);
 
         if queen.egg_progress >= 3f32 {
             queen.egg_progress = 0f32;

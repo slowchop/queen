@@ -7,7 +7,15 @@ dev-native:
 dev-web:
     trunk serve
 
-release-web:
+release-itch:
+    rm -fr dist
+    trunk build --release
+
+    rm -f release.zip
+    cd dist && zip -r ../release.zip *
+    butler push release.zip slowchop/the-queen:html
+
+release-netlify:
     trunk build --release
     netlify deploy --prod --dir dist
 
