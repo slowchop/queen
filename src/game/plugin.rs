@@ -35,6 +35,8 @@ pub enum InputSet {
     ProcessInput,
 
     /// Work out any ray-casting.
+    /// TODO: There's only one system in here which might be a small bottleneck.
+    ///       Maybe that system can just move to ProcessInput with a `run_after()`.
     Raycast,
 
     ///

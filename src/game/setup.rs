@@ -54,8 +54,22 @@ pub fn setup_map(
     let queen_room_height = 3;
 
     let width = 40;
+
+    // Add exit points to the left and right on the surface for scout ants.
+    let exit_points = vec![
+        SideIPos::new(-width / 2 - 1, 0),
+        SideIPos::new(width / 2 + 1, 0),
+    ];
+    for exit_point in exit_points {
+        let cell = CellContent::empty_air();
+        let entity_id = commands.spawn((exit_point, cell)).id();
+        side_map_pos_to_entities.insert(exit_point, entity_id);
+        side_map_pos_to_cell.insert(exit_point, cell);
+        graph.add_node(exit_point);
+    }
+
     for y in -30..20 {
-        for x in -width / 2..width / 2 {
+        for x in -width / 2..(width / 2 + 1) {
             let cell_content = if y >= 0 {
                 CellContent::empty_air()
             } else if x >= queen_start.x - queen_room_width / 2
