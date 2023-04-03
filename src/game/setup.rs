@@ -2,7 +2,7 @@ use crate::game::camera::CameraFocus;
 use crate::game::jobs::Assignment;
 use crate::game::map::{CellContent, SideMapPosToEntities, SIDE_CELL_SIZE};
 use crate::game::pathfinding::{Path, SideMapGraph};
-use crate::game::plugin::{Crawler, Hunger, PlayerState, Speed};
+use crate::game::plugin::{Crawler, Hunger, PlayerState, Speed, ANT_Z, DIRT_Z, QUEEN_Z};
 use crate::game::positions::SideIPos;
 use crate::game::queen::{Queen, QueenMode};
 use bevy::asset::AssetServer;
@@ -76,7 +76,7 @@ pub fn setup_map(
 
             let side_cell = SideIPos::new(x, y);
             let texture_path = cell_content.texture_path();
-            let transform = Transform::from_translation(side_cell.to_world_vec3());
+            let transform = side_cell.to_transform(DIRT_Z);
 
             let mut entity = commands.spawn_empty();
 
@@ -138,10 +138,12 @@ pub fn setup_map(
 
 pub fn setup_queen(mut commands: Commands, asset_server: Res<AssetServer>) {
     let texture = asset_server.load("creatures/queen.png");
+    let transform = SideIPos::new(0, 0).to_transform(QUEEN_Z);
 
     let sprite_bundle = SpriteBundle {
         sprite: sprite(),
         texture,
+        transform,
         ..Default::default()
     };
     commands.spawn((
@@ -158,13 +160,10 @@ pub fn setup_queen(mut commands: Commands, asset_server: Res<AssetServer>) {
 pub fn setup_ants(mut commands: Commands, asset_server: Res<AssetServer>) {
     for x in 0..5 {
         let texture = asset_server.load("creatures/ant.png");
+        let transform = SideIPos::new(2 + x, 0).to_transform(ANT_Z);
 
         let sprite_bundle = SpriteBundle {
-            transform: Transform::from_translation(Vec3::new(
-                (2.0 + x as f32) * SIDE_CELL_SIZE as f32,
-                0.0,
-                1.0,
-            )),
+            transform,
             sprite: sprite(),
             texture,
             ..Default::default()

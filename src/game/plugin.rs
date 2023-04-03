@@ -13,6 +13,11 @@ use bevy::utils::HashMap;
 
 pub struct GamePlugin;
 
+pub const DIRT_Z: f32 = 0f32;
+pub const EGG_Z: f32 = 1f32;
+pub const ANT_Z: f32 = 2f32;
+pub const QUEEN_Z: f32 = 3f32;
+
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<VisitedNodeEvent>();
@@ -48,6 +53,7 @@ impl Plugin for GamePlugin {
             game::queen::stop_queen_path_when_laying_position_changed.run_if(Queen::is_laying),
             game::queen::ensure_path_queen_to_laying_spot.run_if(Queen::is_laying),
             game::queen::grow_and_lay_eggs.run_if(Queen::is_laying),
+            game::eggs::spawn_eggs,
         ));
     }
 

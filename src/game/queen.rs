@@ -1,12 +1,14 @@
 use crate::game::actions::SetQueenLayingPositionEvent;
 use crate::game::ants::AntType;
+use crate::game::eggs::Egg;
 use crate::game::pathfinding::Path;
 use crate::game::plugin::PlayerState;
 use crate::game::positions::SideIPos;
 use bevy::prelude::*;
 
+#[derive(Debug)]
 pub struct EggLaidEvent {
-    pub ant_type: AntType,
+    pub egg: Egg,
     pub position: SideIPos,
 }
 
@@ -108,10 +110,11 @@ pub fn grow_and_lay_eggs(
         queen.egg_progress += time.delta_seconds();
         info!("Egg progress: {}", queen.egg_progress);
 
-        if queen.egg_progress >= 1_000f32 {
+        if queen.egg_progress >= 3f32 {
             queen.egg_progress = 0f32;
+
             egg_laid_writer.send(EggLaidEvent {
-                ant_type: queen.current_egg_type,
+                egg: Egg::new(queen.current_egg_type, 3f32),
                 position: queen_position,
             });
             info!("Egg laid!");

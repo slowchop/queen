@@ -30,8 +30,12 @@ impl SideIPos {
         )
     }
 
-    pub fn to_world_vec3(&self) -> Vec3 {
-        self.to_world_vec2().extend(0.0)
+    pub fn to_world_vec3(&self, z: f32) -> Vec3 {
+        self.to_world_vec2().extend(z)
+    }
+
+    pub fn to_transform(&self, z: f32) -> Transform {
+        Transform::from_translation(self.to_world_vec3(z))
     }
 }
 
