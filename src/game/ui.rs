@@ -7,20 +7,6 @@ use bevy_egui::egui::FontFamily::Proportional;
 use bevy_egui::egui::FontId;
 use bevy_egui::{egui, EguiContext, EguiContexts, EguiInput};
 
-// Left click to select an ant or queen, enemy, or a zone.
-// Right click drag to pan the camera.
-// Scroll to zoom in and out.
-
-// To set the queen breeding zone, click on "New Queen Breeding Spot", then click on a cell.
-// To set the queen mode, switch between "Work" and "Breed" radio
-
-#[derive(PartialEq)]
-enum ControlMode {
-    First,
-    Second,
-    Third,
-}
-
 pub fn setup(mut contexts: EguiContexts) {
     let mut style = (*contexts.ctx_mut().style()).clone();
     style

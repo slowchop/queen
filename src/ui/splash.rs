@@ -14,7 +14,7 @@ pub fn enter(
     time: Res<Time>,
     mut commands: Commands,
     state_config: Res<StateConfig>,
-    mut state: ResMut<State<GameState>>,
+    state: Res<State<GameState>>,
     asset_server: Res<AssetServer>,
 ) {
     let StateDisplay::Splash(splash_state) = state_config.get(&state.0).unwrap() else {

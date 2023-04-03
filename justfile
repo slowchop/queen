@@ -1,3 +1,6 @@
+watch:
+    cargo watch --features bevy/dynamic_linking
+
 dev-native:
     cargo run --features bevy/dynamic_linking
 

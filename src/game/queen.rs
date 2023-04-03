@@ -46,7 +46,7 @@ pub fn set_queen_laying_position(
 /// But only if the queen has laying mode set.
 /// In other words: If the queen is in working mode, we don't want to cancel the pathfinding.
 pub fn stop_queen_path_when_laying_position_changed(
-    mut set_queen_laying_position_reader: EventReader<SetQueenLayingPositionEvent>,
+    set_queen_laying_position_reader: EventReader<SetQueenLayingPositionEvent>,
     mut query: Query<&mut Path, With<Queen>>,
 ) {
     if set_queen_laying_position_reader.is_empty() {

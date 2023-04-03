@@ -91,7 +91,7 @@ pub struct Selectable;
 pub fn enter(
     mut commands: Commands,
     state_config: Res<StateConfig>,
-    mut state: ResMut<State<GameState>>,
+    state: Res<State<GameState>>,
     asset_server: Res<AssetServer>,
 ) {
     let StateDisplay::Menu(menu_state) = state_config.get(&state.0).unwrap() else {

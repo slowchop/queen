@@ -107,7 +107,7 @@ pub fn move_along_path(
         let PathProgress { remaining_steps } = progress;
 
         let next_step = remaining_steps.get(0);
-        let Some(mut next_step) = next_step else {
+        let Some(next_step) = next_step else {
             *path = Path::None;
             continue;
         };
