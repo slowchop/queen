@@ -111,11 +111,11 @@ impl CellContent {
         if self.is_empty() {
             None
         } else if self.is_rock() {
-            Some("dirt/rock.png".to_string())
+            Some("cell/rock.png".to_string())
         } else if self.amount_left() > 127 {
-            Some("dirt/full.png".to_string())
+            Some("cell/full.png".to_string())
         } else {
-            Some("dirt/half.png".to_string())
+            Some("cell/half.png".to_string())
         }
     }
 }

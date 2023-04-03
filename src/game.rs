@@ -1,4 +1,5 @@
 mod actions;
+mod ants;
 mod camera;
 mod jobs;
 mod map;

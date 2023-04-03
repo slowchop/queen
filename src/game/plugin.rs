@@ -1,10 +1,11 @@
 use crate::game;
 use crate::game::actions::SetQueenLayingPositionEvent;
+use crate::game::ants::AntType;
 use crate::game::jobs::Jobs;
 use crate::game::map::CellChangedEvent;
 use crate::game::pathfinding::VisitedNodeEvent;
 use crate::game::positions::SideIPos;
-use crate::game::queen::{Queen, QueenMode};
+use crate::game::queen::{EggLaidEvent, Queen, QueenMode};
 use crate::game::{actions, camera, mouse, setup, ui};
 use bevy::app::{App, Plugin};
 use bevy::prelude::*;
@@ -17,13 +18,9 @@ impl Plugin for GamePlugin {
         app.add_event::<VisitedNodeEvent>();
         app.add_event::<CellChangedEvent>();
         app.add_event::<SetQueenLayingPositionEvent>();
+        app.add_event::<EggLaidEvent>();
 
-        app.insert_resource(PlayerState {
-            queen_laying_position: Some(SideIPos::new(10, -10)),
-            queen_mode: QueenMode::Laying,
-            action_mode: ActionMode::Select,
-        });
-
+        app.insert_resource(PlayerState::default());
         app.insert_resource(Jobs::default());
 
         app.add_startup_systems((
@@ -48,9 +45,9 @@ impl Plugin for GamePlugin {
             game::map::passive_dig_when_visiting_a_cell,
             game::map::detect_cell_content_changes_and_update_rendering,
             game::queen::set_queen_laying_position,
-            game::queen::stop_queen_pathfinding_when_laying_target_changed.run_if(Queen::is_laying),
+            game::queen::stop_queen_path_when_laying_position_changed.run_if(Queen::is_laying),
             game::queen::ensure_path_queen_to_laying_spot.run_if(Queen::is_laying),
-            game::queen::lay_eggs.run_if(Queen::is_laying),
+            game::queen::grow_and_lay_eggs.run_if(Queen::is_laying),
         ));
     }
 
@@ -63,15 +60,17 @@ impl Plugin for GamePlugin {
     }
 }
 
-#[derive(Resource, Debug)]
+#[derive(Resource, Debug, Default)]
 pub struct PlayerState {
     pub queen_laying_position: Option<SideIPos>,
+    pub queen_laying_ant_type: AntType,
     pub queen_mode: QueenMode,
     pub action_mode: ActionMode,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Default)]
 pub enum ActionMode {
+    #[default]
     Select,
     // MoveCamera,
     // ZoomIn,

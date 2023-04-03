@@ -1,3 +1,4 @@
+use crate::game::ants::AntType;
 use crate::game::plugin::{ActionMode, PlayerState};
 use crate::game::queen::QueenMode;
 use bevy::prelude::*;
@@ -32,6 +33,7 @@ pub fn control(mut contexts: EguiContexts, mut player_state: ResMut<PlayerState>
     let PlayerState {
         queen_mode,
         action_mode,
+        queen_laying_ant_type,
         ..
     } = &mut *player_state;
 
@@ -66,6 +68,16 @@ pub fn control(mut contexts: EguiContexts, mut player_state: ResMut<PlayerState>
                             "Set Laying Position",
                         );
                         ui.selectable_value(action_mode, ActionMode::Dig, "Dig");
+                    });
+                });
+
+                ui.separator();
+
+                ui.vertical(|ui| {
+                    ui.heading("Next Ant Type");
+                    ui.horizontal_centered(|ui| {
+                        ui.selectable_value(queen_laying_ant_type, AntType::Scout, "Scout");
+                        ui.selectable_value(queen_laying_ant_type, AntType::Cargo, "Cargo");
                     });
                 });
             });

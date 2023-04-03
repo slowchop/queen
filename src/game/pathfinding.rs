@@ -45,11 +45,11 @@ impl Path {
         *self = Path::None;
     }
 
-    pub fn is_moving(&self) -> bool {
-        matches!(self, Path::Progress(_))
+    pub fn has_target(&self) -> bool {
+        matches!(self, Path::Progress(_)) || matches!(self, Path::NeedsPath(_))
     }
 
-    pub fn is_none(&self) -> bool {
+    pub fn has_no_path(&self) -> bool {
         matches!(self, Path::None)
     }
 }

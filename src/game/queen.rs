@@ -1,18 +1,25 @@
 use crate::game::actions::SetQueenLayingPositionEvent;
+use crate::game::ants::AntType;
 use crate::game::pathfinding::Path;
 use crate::game::plugin::PlayerState;
 use crate::game::positions::SideIPos;
 use bevy::prelude::*;
 
-#[derive(Component, Default)]
+pub struct EggLaidEvent {
+    pub ant_type: AntType,
+    pub position: SideIPos,
+}
+
+#[derive(Component, Default, Copy, Clone)]
 pub struct Queen {
-    // pub current_egg_type: AntType,
-    pub egg_progress: u32,
+    pub current_egg_type: AntType,
+    pub egg_progress: f32,
 }
 
 /// Used in [PlayerState].
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Default)]
 pub enum QueenMode {
+    #[default]
     Working,
     Laying,
 }
@@ -36,7 +43,7 @@ pub fn set_queen_laying_position(
 /// Cancel pathfinding for the queen so that it doesn't move to the previous one.
 /// But only if the queen has laying mode set.
 /// In other words: If the queen is in working mode, we don't want to cancel the pathfinding.
-pub fn stop_queen_pathfinding_when_laying_target_changed(
+pub fn stop_queen_path_when_laying_position_changed(
     mut set_queen_laying_position_reader: EventReader<SetQueenLayingPositionEvent>,
     mut query: Query<&mut Path, With<Queen>>,
 ) {
@@ -49,17 +56,23 @@ pub fn stop_queen_pathfinding_when_laying_target_changed(
     }
 }
 
+/// If the queen is in laying mode, ensure that it is pathing to the laying spot.
 pub fn ensure_path_queen_to_laying_spot(
     player_state: Res<PlayerState>,
-    mut query: Query<&mut Path, With<Queen>>,
+    mut query: Query<(&mut Path, &Transform), With<Queen>>,
 ) {
     let Some(queen_laying_position) = player_state.queen_laying_position else {
         warn!("Queen laying position not set");
         return;
     };
 
-    for mut path in query.iter_mut() {
-        if path.is_moving() {
+    for (mut path, transform) in query.iter_mut() {
+        if path.has_target() {
+            continue;
+        }
+
+        // Already at the laying spot.
+        if SideIPos::from(transform) == queen_laying_position {
             continue;
         }
 
@@ -69,9 +82,14 @@ pub fn ensure_path_queen_to_laying_spot(
 }
 
 /// If the queen is at the laying spot and is set to laying mode, increase the egg progress.
-pub fn lay_eggs(player_state: Res<PlayerState>, mut query: Query<(&mut Queen, &Transform, &Path)>) {
+pub fn grow_and_lay_eggs(
+    time: Res<Time>,
+    player_state: Res<PlayerState>,
+    mut query: Query<(&mut Queen, &Transform, &Path)>,
+    mut egg_laid_writer: EventWriter<EggLaidEvent>,
+) {
     for (mut queen, transform, path) in query.iter_mut() {
-        if path.is_moving() {
+        if path.has_target() {
             continue;
         }
 
@@ -82,11 +100,21 @@ pub fn lay_eggs(player_state: Res<PlayerState>, mut query: Query<(&mut Queen, &T
 
         let queen_position = SideIPos::from(transform);
         if queen_position != queen_laying_position {
+            // This should be handled by [ensure_path_queen_to_laying_spot].
             warn!("Queen isn't at laying position and Path is None.");
             continue;
         }
 
-        queen.egg_progress += 1;
+        queen.egg_progress += time.delta_seconds();
         info!("Egg progress: {}", queen.egg_progress);
+
+        if queen.egg_progress >= 1_000f32 {
+            queen.egg_progress = 0f32;
+            egg_laid_writer.send(EggLaidEvent {
+                ant_type: queen.current_egg_type,
+                position: queen_position,
+            });
+            info!("Egg laid!");
+        }
     }
 }
