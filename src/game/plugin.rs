@@ -1,21 +1,20 @@
 use crate::game;
-use crate::game::actions::SetQueenLayingPositionEvent;
 use crate::game::ants::AntType;
 use crate::game::eggs::SpawnAntEvent;
 use crate::game::jobs::Jobs;
 use crate::game::map::CellChangedEvent;
 use crate::game::pathfinding::VisitedNodeEvent;
 use crate::game::positions::SideIPos;
-use crate::game::queen::{EggLaidEvent, Queen, QueenMode};
+use crate::game::queen::{EggLaidEvent, Queen};
 use crate::game::{actions, camera, mouse, setup, ui};
 use bevy::app::{App, Plugin};
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 
 pub const DIRT_Z: f32 = 0f32;
-pub const EGG_Z: f32 = 1f32;
+pub const QUEEN_Z: f32 = 1f32;
 pub const ANT_Z: f32 = 2f32;
-pub const QUEEN_Z: f32 = 3f32;
+pub const EGG_Z: f32 = 3f32;
 
 pub struct GamePlugin;
 
@@ -46,7 +45,6 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<VisitedNodeEvent>();
         app.add_event::<CellChangedEvent>();
-        app.add_event::<SetQueenLayingPositionEvent>();
         app.add_event::<EggLaidEvent>();
         app.add_event::<SpawnAntEvent>();
 
@@ -86,10 +84,7 @@ impl Plugin for GamePlugin {
                 game::map::passive_dig_when_visiting_a_cell,
                 game::map::detect_cell_content_changes_and_update_rendering,
                 game::map::detect_cell_content_changes_and_update_graph,
-                game::queen::set_queen_laying_position,
-                game::queen::stop_queen_path_when_laying_position_changed.run_if(Queen::is_laying),
-                game::queen::ensure_path_queen_to_laying_spot.run_if(Queen::is_laying),
-                game::queen::grow_and_lay_eggs.run_if(Queen::is_laying),
+                game::queen::grow_and_lay_eggs,
                 game::eggs::spawn_eggs,
                 game::eggs::grow_eggs,
                 game::animation::animate_sprites,
@@ -110,9 +105,9 @@ impl Plugin for GamePlugin {
 
 #[derive(Resource, Debug, Default)]
 pub struct PlayerState {
-    pub queen_laying_position: Option<SideIPos>,
+    // pub queen_laying_position: Option<SideIPos>,
     pub queen_laying_ant_type: AntType,
-    pub queen_mode: QueenMode,
+    // pub queen_mode: QueenMode,
     pub action_mode: ActionMode,
 }
 
@@ -124,7 +119,7 @@ pub enum ActionMode {
     // ZoomIn,
     // ZoomOut,
     Dig,
-    SetLayingPosition,
+    // SetLayingPosition,
 }
 
 /// A creature that crawls around the world and uses pathfinding.

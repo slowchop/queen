@@ -51,6 +51,13 @@ impl CellContent {
         }
     }
 
+    pub fn empty_underground() -> Self {
+        Self {
+            underground: true,
+            cell_type: CellType::Empty,
+        }
+    }
+
     pub fn random_dirt() -> Self {
         Self {
             underground: true,
@@ -188,6 +195,7 @@ pub fn detect_cell_content_changes_and_update_graph(
                 continue;
             };
 
+            // TODO: This is similar to the map generation code, so we should probably factor it out.
             let weight = a_weight as u64 + b_weight as u64;
             // graph.add_edge(*pos, neighbour, weight as u64);
             graph.edge_weight_mut(pos, neighbour).map(|w| *w = weight);

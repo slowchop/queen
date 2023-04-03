@@ -6,7 +6,7 @@ use crate::game::map::{CellContent, SideMapPosToEntities, SIDE_CELL_SIZE};
 use crate::game::pathfinding::{Path, SideMapGraph};
 use crate::game::plugin::{Crawler, Hunger, PlayerState, Speed, ANT_Z, DIRT_Z, QUEEN_Z};
 use crate::game::positions::SideIPos;
-use crate::game::queen::{EggLaidEvent, Queen, QueenMode};
+use crate::game::queen::{EggLaidEvent, Queen};
 use bevy::asset::AssetServer;
 use bevy::core_pipeline::clear_color::ClearColorConfig;
 use bevy::prelude::*;
@@ -17,6 +17,10 @@ use bevy::utils::petgraph::visit::IntoEdgeReferences;
 use bevy::utils::HashMap;
 use bevy_prototype_debug_lines::DebugLines;
 use pathfinding::num_traits::Signed;
+
+pub fn queen_start() -> SideIPos {
+    SideIPos::new(0, -20)
+}
 
 /// We want the transform position specified to be on the top left of the rendered sprite.
 pub fn sprite() -> Sprite {
@@ -45,11 +49,21 @@ pub fn setup_map(
 
     let mut graph = UnGraphMap::<SideIPos, u64>::with_capacity(1_000, 4_000);
 
+    let queen_start = queen_start();
+    let queen_room_width = 3;
+    let queen_room_height = 3;
+
     let width = 40;
     for y in -30..20 {
         for x in -width / 2..width / 2 {
             let cell_content = if y >= 0 {
                 CellContent::empty_air()
+            } else if x >= queen_start.x - queen_room_width / 2
+                && x <= queen_start.x + queen_room_width / 2
+                && y >= queen_start.y
+                && y < queen_start.y + queen_room_height
+            {
+                CellContent::empty_underground()
             } else {
                 // Create dirt from Y - 1 and downwards with a width of 20.
                 // Y 0 or higher is the surface, so make Dirt::empty()
@@ -147,7 +161,8 @@ pub fn setup_map(
 
 pub fn setup_queen(mut commands: Commands, asset_server: Res<AssetServer>) {
     let texture = asset_server.load("creatures/queen.png");
-    let transform = SideIPos::new(0, 0).to_transform(QUEEN_Z);
+    let queen_start = queen_start();
+    let transform = queen_start.to_transform(QUEEN_Z);
 
     let sprite_bundle = SpriteBundle {
         sprite: sprite(),
@@ -155,15 +170,7 @@ pub fn setup_queen(mut commands: Commands, asset_server: Res<AssetServer>) {
         transform,
         ..Default::default()
     };
-    commands.spawn((
-        sprite_bundle,
-        Queen::default(),
-        Crawler,
-        Speed::default(),
-        Hunger::default(),
-        Assignment::None,
-        Path::None,
-    ));
+    commands.spawn((sprite_bundle, Queen::default(), Hunger::default()));
 }
 
 pub fn setup_test_eggs(

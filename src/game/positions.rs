@@ -83,6 +83,15 @@ impl SidePosition {
     }
 }
 
+impl From<SideIPos> for SidePosition {
+    fn from(side_ipos: SideIPos) -> Self {
+        Self::new(
+            side_ipos.0.x as f32 * SIDE_CELL_SIZE as f32,
+            side_ipos.0.y as f32 * SIDE_CELL_SIZE as f32,
+        )
+    }
+}
+
 fn morton_encode(x: i32, y: i32) -> i64 {
     let mut z = 0i64;
     let x = x as i64;

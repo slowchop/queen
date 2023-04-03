@@ -1,4 +1,5 @@
 use crate::game::positions::SidePosition;
+use crate::game::setup::queen_start;
 use crate::input::{InputAction, InputStates};
 use bevy::core_pipeline::clear_color::ClearColorConfig;
 use bevy::prelude::*;
@@ -21,10 +22,10 @@ pub struct CameraFocus {
     zoom: ZoomLevel,
 }
 
-impl Default for CameraFocus {
-    fn default() -> Self {
+impl CameraFocus {
+    pub fn new(target: SidePosition) -> Self {
         Self {
-            target: SidePosition::new(0f32, 0f32),
+            target,
             zoom: ZoomLevel(1),
         }
     }
@@ -39,7 +40,7 @@ pub fn setup(mut commands: Commands) {
         ..Default::default()
     });
 
-    commands.insert_resource(CameraFocus::default());
+    commands.insert_resource(CameraFocus::new(queen_start().into()));
 }
 
 pub fn control(

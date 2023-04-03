@@ -1,6 +1,5 @@
 use crate::game::ants::AntType;
 use crate::game::plugin::{ActionMode, PlayerState};
-use crate::game::queen::QueenMode;
 use bevy::prelude::*;
 use bevy_egui::egui::style::Spacing;
 use bevy_egui::egui::FontFamily::Proportional;
@@ -32,7 +31,6 @@ pub fn control(
     mut is_hovering_over_ui: ResMut<IsHoveringOverUi>,
 ) {
     let PlayerState {
-        queen_mode,
         action_mode,
         queen_laying_ant_type,
         ..
@@ -44,24 +42,9 @@ pub fn control(
             ui.add_space(10f32);
             ui.horizontal_centered(|ui| {
                 ui.vertical(|ui| {
-                    ui.heading("Queen Mode");
-                    ui.horizontal_centered(|ui| {
-                        ui.selectable_value(queen_mode, QueenMode::Working, "Work");
-                        ui.selectable_value(queen_mode, QueenMode::Laying, "Lay Eggs");
-                    });
-                });
-
-                ui.separator();
-
-                ui.vertical(|ui| {
                     ui.heading("Actions");
                     ui.horizontal_centered(|ui| {
                         ui.selectable_value(action_mode, ActionMode::Select, "Select");
-                        ui.selectable_value(
-                            action_mode,
-                            ActionMode::SetLayingPosition,
-                            "Set Laying Position",
-                        );
                         ui.selectable_value(action_mode, ActionMode::Dig, "Dig");
                     });
                 });
