@@ -1,6 +1,7 @@
 use crate::game;
 use crate::game::actions::SetQueenLayingPositionEvent;
 use crate::game::ants::AntType;
+use crate::game::eggs::SpawnAntEvent;
 use crate::game::jobs::Jobs;
 use crate::game::map::CellChangedEvent;
 use crate::game::pathfinding::VisitedNodeEvent;
@@ -11,12 +12,12 @@ use bevy::app::{App, Plugin};
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 
-pub struct GamePlugin;
-
 pub const DIRT_Z: f32 = 0f32;
 pub const EGG_Z: f32 = 1f32;
 pub const ANT_Z: f32 = 2f32;
 pub const QUEEN_Z: f32 = 3f32;
+
+pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
@@ -24,6 +25,7 @@ impl Plugin for GamePlugin {
         app.add_event::<CellChangedEvent>();
         app.add_event::<SetQueenLayingPositionEvent>();
         app.add_event::<EggLaidEvent>();
+        app.add_event::<SpawnAntEvent>();
 
         app.insert_resource(PlayerState::default());
         app.insert_resource(Jobs::default());
@@ -32,7 +34,7 @@ impl Plugin for GamePlugin {
             camera::setup,
             setup::setup_map,
             setup::setup_queen,
-            setup::setup_ants,
+            setup::setup_test_eggs,
             mouse::setup,
         ));
         app.add_systems((camera::control, camera::update).chain());
@@ -54,7 +56,9 @@ impl Plugin for GamePlugin {
             game::queen::ensure_path_queen_to_laying_spot.run_if(Queen::is_laying),
             game::queen::grow_and_lay_eggs.run_if(Queen::is_laying),
             game::eggs::spawn_eggs,
+            game::eggs::grow_eggs,
             game::animation::animate_sprites,
+            game::ants::spawn_ants,
         ));
     }
 

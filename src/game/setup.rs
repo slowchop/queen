@@ -1,11 +1,12 @@
 use crate::game::animation::{AnimationIndices, AnimationTimer};
 use crate::game::camera::CameraFocus;
+use crate::game::eggs::Egg;
 use crate::game::jobs::Assignment;
 use crate::game::map::{CellContent, SideMapPosToEntities, SIDE_CELL_SIZE};
 use crate::game::pathfinding::{Path, SideMapGraph};
 use crate::game::plugin::{Crawler, Hunger, PlayerState, Speed, ANT_Z, DIRT_Z, QUEEN_Z};
 use crate::game::positions::SideIPos;
-use crate::game::queen::{Queen, QueenMode};
+use crate::game::queen::{EggLaidEvent, Queen, QueenMode};
 use bevy::asset::AssetServer;
 use bevy::core_pipeline::clear_color::ClearColorConfig;
 use bevy::prelude::*;
@@ -164,43 +165,18 @@ pub fn setup_queen(mut commands: Commands, asset_server: Res<AssetServer>) {
     ));
 }
 
-pub fn setup_ants(
+pub fn setup_test_eggs(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut egg_laid_writer: EventWriter<EggLaidEvent>,
 ) {
-    for x in 0..5 {
-        let transform = SideIPos::new(2 + x, 0).to_transform(ANT_Z);
-
-        let texture_handle = asset_server.load("creatures/soldier.png");
-        let texture_atlas = TextureAtlas::from_grid(
-            texture_handle,
-            Vec2::new(SIDE_CELL_SIZE as f32, SIDE_CELL_SIZE as f32),
-            4,
-            1,
-            None,
-            None,
-        );
-        let texture_atlas = texture_atlases.add(texture_atlas);
-        let animation_indices = AnimationIndices { first: 0, last: 3 };
-
-        let sprite_sheet_bundle = SpriteSheetBundle {
-            transform,
-            // sprite: sprite(),
-            // texture,
-            sprite: texture_atlas_sprite(),
-            texture_atlas,
-            ..Default::default()
-        };
-        commands.spawn((
-            sprite_sheet_bundle,
-            animation_indices,
-            AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
-            Crawler,
-            Speed::default(),
-            Hunger::default(),
-            Assignment::None,
-            Path::NeedsPath(SideIPos::new(0 + x, -20)),
-        ));
-    }
+    egg_laid_writer.send(EggLaidEvent {
+        egg: Egg {
+            ant_type: Default::default(),
+            growth: 0.0,
+            hatch_at: 3.0,
+        },
+        position: SideIPos::new(-2, 0),
+    });
 }

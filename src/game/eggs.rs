@@ -1,9 +1,15 @@
 use crate::game::ants::AntType;
 use crate::game::plugin::EGG_Z;
+use crate::game::positions::SideIPos;
 use crate::game::queen::EggLaidEvent;
 use crate::game::setup::sprite;
 use bevy::asset::AssetServer;
-use bevy::prelude::{Commands, Component, EventReader, Res, SpriteBundle};
+use bevy::prelude::*;
+
+pub struct SpawnAntEvent {
+    pub ant_type: AntType,
+    pub position: SideIPos,
+}
 
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Egg {
@@ -41,16 +47,24 @@ pub fn spawn_eggs(
     }
 }
 
-// pub fn grow_eggs(
-//     mut commands: Commands,
-//     mut query: Query<(Entity, &mut Egg)>,
-//     time: Res<bevy::prelude::Time>,
-// ) {
-//     for (entity, mut egg) in query.iter_mut() {
-//         egg.growth += time.delta_seconds();
-//         if egg.growth >= egg.hatch_at {
-//             commands.despawn(entity);
-//         }
-//     }
-// }
-// )
+pub fn grow_eggs(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut Egg, &Transform)>,
+    mut spawn_ant_writer: EventWriter<SpawnAntEvent>,
+) {
+    for (entity, mut egg, transform) in query.iter_mut() {
+        egg.growth += time.delta_seconds();
+        if egg.growth < egg.hatch_at {
+            continue;
+        }
+
+        let position = SideIPos::from(transform);
+        spawn_ant_writer.send(SpawnAntEvent {
+            ant_type: egg.ant_type,
+            position,
+        });
+
+        commands.entity(entity).despawn();
+    }
+}

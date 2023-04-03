@@ -21,8 +21,8 @@ pub struct Queen {
 /// Used in [PlayerState].
 #[derive(PartialEq, Debug, Default)]
 pub enum QueenMode {
-    #[default]
     Working,
+    #[default]
     Laying,
 }
 
