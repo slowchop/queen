@@ -40,3 +40,17 @@ pub fn spawn_eggs(
         commands.spawn((sprite_bundle, *egg));
     }
 }
+
+// pub fn grow_eggs(
+//     mut commands: Commands,
+//     mut query: Query<(Entity, &mut Egg)>,
+//     time: Res<bevy::prelude::Time>,
+// ) {
+//     for (entity, mut egg) in query.iter_mut() {
+//         egg.growth += time.delta_seconds();
+//         if egg.growth >= egg.hatch_at {
+//             commands.despawn(entity);
+//         }
+//     }
+// }
+// )

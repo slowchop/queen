@@ -1,4 +1,5 @@
 mod actions;
+mod animation;
 mod ants;
 mod camera;
 mod eggs;

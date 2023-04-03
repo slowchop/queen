@@ -54,6 +54,7 @@ impl Plugin for GamePlugin {
             game::queen::ensure_path_queen_to_laying_spot.run_if(Queen::is_laying),
             game::queen::grow_and_lay_eggs.run_if(Queen::is_laying),
             game::eggs::spawn_eggs,
+            game::animation::animate_sprites,
         ));
     }
 

@@ -1,3 +1,4 @@
+use crate::game::animation::{AnimationIndices, AnimationTimer};
 use crate::game::camera::CameraFocus;
 use crate::game::jobs::Assignment;
 use crate::game::map::{CellContent, SideMapPosToEntities, SIDE_CELL_SIZE};
@@ -19,6 +20,12 @@ use pathfinding::num_traits::Signed;
 /// We want the transform position specified to be on the top left of the rendered sprite.
 pub fn sprite() -> Sprite {
     Sprite {
+        anchor: Anchor::BottomLeft,
+        ..Default::default()
+    }
+}
+pub fn texture_atlas_sprite() -> TextureAtlasSprite {
+    TextureAtlasSprite {
         anchor: Anchor::BottomLeft,
         ..Default::default()
     }
@@ -157,19 +164,38 @@ pub fn setup_queen(mut commands: Commands, asset_server: Res<AssetServer>) {
     ));
 }
 
-pub fn setup_ants(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn setup_ants(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+) {
     for x in 0..5 {
-        let texture = asset_server.load("creatures/ant.png");
         let transform = SideIPos::new(2 + x, 0).to_transform(ANT_Z);
 
-        let sprite_bundle = SpriteBundle {
+        let texture_handle = asset_server.load("creatures/soldier.png");
+        let texture_atlas = TextureAtlas::from_grid(
+            texture_handle,
+            Vec2::new(SIDE_CELL_SIZE as f32, SIDE_CELL_SIZE as f32),
+            4,
+            1,
+            None,
+            None,
+        );
+        let texture_atlas = texture_atlases.add(texture_atlas);
+        let animation_indices = AnimationIndices { first: 0, last: 3 };
+
+        let sprite_sheet_bundle = SpriteSheetBundle {
             transform,
-            sprite: sprite(),
-            texture,
+            // sprite: sprite(),
+            // texture,
+            sprite: texture_atlas_sprite(),
+            texture_atlas,
             ..Default::default()
         };
         commands.spawn((
-            sprite_bundle,
+            sprite_sheet_bundle,
+            animation_indices,
+            AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
             Crawler,
             Speed::default(),
             Hunger::default(),

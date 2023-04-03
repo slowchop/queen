@@ -3,7 +3,7 @@ use crate::game::positions::SideIPos;
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 
-pub const SIDE_CELL_SIZE: u8 = 16;
+pub const SIDE_CELL_SIZE: u8 = 32;
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct CellChangedEvent(Entity);
