@@ -7,6 +7,9 @@ use bevy_egui::egui::FontFamily::Proportional;
 use bevy_egui::egui::FontId;
 use bevy_egui::{egui, EguiContext, EguiContexts, EguiInput};
 
+#[derive(Resource, Default)]
+pub struct IsHoveringOverUi(bool);
+
 pub fn setup(mut contexts: EguiContexts) {
     let mut style = (*contexts.ctx_mut().style()).clone();
     style
@@ -15,7 +18,19 @@ pub fn setup(mut contexts: EguiContexts) {
     contexts.ctx_mut().set_style(style);
 }
 
-pub fn control(mut contexts: EguiContexts, mut player_state: ResMut<PlayerState>) {
+pub fn reset_hovering_over_ui_flag(mut is_hovering_over_ui: ResMut<IsHoveringOverUi>) {
+    *is_hovering_over_ui = IsHoveringOverUi(false);
+}
+
+pub fn not_using_ui(is_hovering_over_ui: Res<IsHoveringOverUi>) -> bool {
+    !is_hovering_over_ui.0
+}
+
+pub fn control(
+    mut contexts: EguiContexts,
+    mut player_state: ResMut<PlayerState>,
+    mut is_hovering_over_ui: ResMut<IsHoveringOverUi>,
+) {
     let PlayerState {
         queen_mode,
         action_mode,
@@ -23,7 +38,7 @@ pub fn control(mut contexts: EguiContexts, mut player_state: ResMut<PlayerState>
         ..
     } = &mut *player_state;
 
-    egui::TopBottomPanel::bottom("top_panel")
+    let response = egui::TopBottomPanel::bottom("top_panel")
         .exact_height(80f32)
         .show(contexts.ctx_mut(), |ui| {
             ui.add_space(10f32);
@@ -68,4 +83,8 @@ pub fn control(mut contexts: EguiContexts, mut player_state: ResMut<PlayerState>
                 });
             });
         });
+
+    if response.response.hovered() {
+        *is_hovering_over_ui = IsHoveringOverUi(true);
+    }
 }

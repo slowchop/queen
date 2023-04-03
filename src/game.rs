@@ -14,3 +14,5 @@ mod setup;
 mod ui;
 
 pub use plugin::GamePlugin;
+pub use plugin::InputSet;
+pub use ui::not_using_ui;
