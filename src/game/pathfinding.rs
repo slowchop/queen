@@ -82,7 +82,7 @@ pub fn needs_path(
             for (a, b) in found_path.windows(2).map(|w| (w[0], w[1])) {
                 let a = a.to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
                 let b = b.to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
-                debug_lines.line_colored(a.extend(0f32), b.extend(0f32), 100.0, Color::LIME_GREEN);
+                debug_lines.line_colored(a.extend(0f32), b.extend(0f32), 1.0, Color::LIME_GREEN);
             }
             *path = Path::Progress(PathProgress {
                 remaining_steps: found_path,

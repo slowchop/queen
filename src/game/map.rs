@@ -1,9 +1,16 @@
-use crate::game::pathfinding::VisitedNodeEvent;
+use crate::game::pathfinding::{SideMapGraph, VisitedNodeEvent};
 use crate::game::positions::SideIPos;
 use bevy::prelude::*;
+use bevy::utils::petgraph::prelude::EdgeRef;
+use bevy::utils::petgraph::visit::IntoEdgeReferences;
 use bevy::utils::HashMap;
+use bevy_prototype_debug_lines::DebugLines;
 
 pub const SIDE_CELL_SIZE: u8 = 32;
+
+/// A position in the world when an ant can "exit" the map to look for food.
+#[derive(Component)]
+pub struct MapExit;
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct CellChangedEvent(Entity);
@@ -142,6 +149,66 @@ pub fn passive_dig_when_visiting_a_cell(
         // TODO: "Move" the amount removed the the previous cell (and overflow outwards if that's not possible).
 
         cell_changed_writer.send(CellChangedEvent(*entity));
+    }
+}
+
+pub fn detect_cell_content_changes_and_update_graph(
+    mut debug_lines: ResMut<DebugLines>,
+    mut graph: ResMut<SideMapGraph>,
+    mut side_map_pos_to_entities: ResMut<SideMapPosToEntities>,
+    mut query: Query<(&CellContent, &Transform)>,
+    mut cell_changed_reader: EventReader<CellChangedEvent>,
+) {
+    for cell_changed_event in cell_changed_reader.iter() {
+        let entity = **cell_changed_event;
+
+        // Grab the CellContent for this entity.
+        let Ok((cell, transform)) = query.get(entity) else {
+            warn!(?cell_changed_event, "Could not find CellContent for entity");
+            continue;
+        };
+
+        let pos = SideIPos::from(transform);
+        let Some(a_weight) = cell.weight() else {
+            warn!(?cell_changed_event, "Could not find weight for cell content");
+            continue;
+        };
+
+        // Work out the neighbours and update the edge values
+        for neighbour in pos.sides() {
+            let Some(other_entity) = side_map_pos_to_entities.get(&neighbour) else {
+                continue;
+            };
+
+            let Ok((other_cell, _)) = query.get(*other_entity) else {
+                continue;
+            };
+
+            let Some(b_weight) = other_cell.weight() else {
+                continue;
+            };
+
+            let weight = a_weight as u64 + b_weight as u64;
+            // graph.add_edge(*pos, neighbour, weight as u64);
+            graph.edge_weight_mut(pos, neighbour).map(|w| *w = weight);
+        }
+    }
+
+    for edge in graph.edge_references() {
+        let weight = edge.weight();
+        let a = edge.source().to_world_vec2()
+            + SIDE_CELL_SIZE as f32 / 2f32
+            + rand::random::<f32>() * 5.1;
+        let b = edge.target().to_world_vec2()
+            + SIDE_CELL_SIZE as f32 / 2f32
+            + rand::random::<f32>() * 5.1;
+
+        debug_lines.line_colored(
+            a.extend(10f32),
+            b.extend(10f32),
+            0.0,
+            Color::rgb(*weight as f32 / 255f32, 1f32 - *weight as f32 / 255f32, 0.0),
+        );
     }
 }
 

@@ -45,14 +45,14 @@ pub fn setup_map(
 
     let mut graph = UnGraphMap::<SideIPos, u64>::with_capacity(1_000, 4_000);
 
-    // Create dirt from Y - 1 and downwards with a width of 20.
-    // Y 0 or higher is the surface, so make Dirt::empty()
     let width = 40;
     for y in -30..20 {
         for x in -width / 2..width / 2 {
             let cell_content = if y >= 0 {
                 CellContent::empty_air()
             } else {
+                // Create dirt from Y - 1 and downwards with a width of 20.
+                // Y 0 or higher is the surface, so make Dirt::empty()
                 // We want a V shape around the origin so that ants are initially biased towards
                 // the middle and not dig new holes.
                 //
@@ -64,12 +64,11 @@ pub fn setup_map(
                 //
                 let forced_dirt_amount = (y.abs() * 10 + x.abs() * 30) as f32;
                 // Add a random amount of dirt.
-                let forced_dirt_amount = forced_dirt_amount + rand::random::<f32>() * 100.0 - 50.0;
+                let forced_dirt_amount = forced_dirt_amount + rand::random::<f32>() * 50.0 - 20.0;
 
-                // limit to 0-255 as u64
-                let forced_dirt_amount = forced_dirt_amount.max(0.0).min(255.0) as u64;
+                let forced_dirt_amount = forced_dirt_amount.max(0.0) as u64;
 
-                if forced_dirt_amount > 50u64 && forced_dirt_amount < 255u64 {
+                if forced_dirt_amount > 0u64 && forced_dirt_amount < 255u64 {
                     CellContent::dirt(forced_dirt_amount as u8)
                 } else if y >= -5 {
                     CellContent::dirt(

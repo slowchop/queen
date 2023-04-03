@@ -85,6 +85,7 @@ impl Plugin for GamePlugin {
                 game::pathfinding::move_along_path,
                 game::map::passive_dig_when_visiting_a_cell,
                 game::map::detect_cell_content_changes_and_update_rendering,
+                game::map::detect_cell_content_changes_and_update_graph,
                 game::queen::set_queen_laying_position,
                 game::queen::stop_queen_path_when_laying_position_changed.run_if(Queen::is_laying),
                 game::queen::ensure_path_queen_to_laying_spot.run_if(Queen::is_laying),
