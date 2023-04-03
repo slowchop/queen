@@ -14,7 +14,6 @@ pub struct EggLaidEvent {
 
 #[derive(Component, Default, Copy, Clone)]
 pub struct Queen {
-    pub current_egg_type: AntType,
     pub egg_progress: f32,
 }
 
@@ -114,7 +113,7 @@ pub fn grow_and_lay_eggs(
             queen.egg_progress = 0f32;
 
             egg_laid_writer.send(EggLaidEvent {
-                egg: Egg::new(queen.current_egg_type, 3f32),
+                egg: Egg::new(player_state.queen_laying_ant_type, 3f32),
                 position: queen_position,
             });
             info!("Egg laid!");

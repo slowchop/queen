@@ -79,6 +79,8 @@ pub fn control(
                     ui.horizontal_centered(|ui| {
                         ui.selectable_value(queen_laying_ant_type, AntType::Scout, "Scout");
                         ui.selectable_value(queen_laying_ant_type, AntType::Cargo, "Cargo");
+                        ui.selectable_value(queen_laying_ant_type, AntType::Soldier, "Soldier");
+                        ui.selectable_value(queen_laying_ant_type, AntType::Nurse, "Nurse");
                     });
                 });
             });
