@@ -46,6 +46,7 @@ impl Default for GameTime {
 
 pub fn new_frame(time: Res<Time>, mut game_time: ResMut<GameTime>) {
     if game_time.system_game_pause {
+        game_time.delta = Duration::ZERO;
         return;
     }
 

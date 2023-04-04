@@ -53,7 +53,7 @@ impl Plugin for GamePlugin {
         app.add_event::<CellChangedEvent>();
         app.add_event::<EggLaidEvent>();
         app.add_event::<SpawnAntEvent>();
-        app.add_event::<food::CarryFoodEvent>();
+        app.add_event::<food::AddFoodForAntToCarryEvent>();
 
         app.insert_resource(GameTime::default());
         app.insert_resource(ui::IsHoveringOverUi::default());
@@ -117,7 +117,7 @@ impl Plugin for GamePlugin {
                 brains::leave_map_action,
                 brains::outside_map_discovering_food_action,
                 brains::move_to_queen_action,
-                brains::offer_new_food_to_queen_action,
+                brains::offer_food_discovery_to_queen_action,
             )
                 .in_set(BigBrainSet::Actions),
         );

@@ -1,5 +1,8 @@
 use crate::game::ants::AntType;
-use crate::game::food::{CarryFoodEvent, CarryingFood, FoodState, FoodType};
+use crate::game::food::{
+    AddFoodForAntToCarryEvent, CarryingDiscoveredFood, CarryingFood, DiscoveredFood, FoodState,
+    FoodType,
+};
 use crate::game::hunger::Hunger;
 use crate::game::map::ExitPositions;
 use crate::game::pathfinding::Path;
@@ -7,6 +10,7 @@ use crate::game::positions::SideIPos;
 use crate::game::queen::Queen;
 use crate::game::time::GameTime;
 use bevy::prelude::*;
+use bevy_egui::egui::Align2;
 use bevy_egui::{egui, EguiContexts};
 use big_brain::prelude::*;
 use rand::prelude::SliceRandom;
@@ -59,29 +63,31 @@ pub fn leave_map_action(
 /// The ant is off the map going to get new food.
 #[derive(Clone, Component, Debug, ActionBuilder, Default)]
 pub struct OutsideMapDiscoveringNewFoodAction {
+    pub initial_time: Duration,
     pub time_left: Duration,
 }
 
 pub fn outside_map_discovering_food_action(
     time: Res<GameTime>,
     mut food_state: ResMut<FoodState>,
-    mut ants: Query<(Entity, &mut Visibility), With<AntType>>,
+    mut ants: Query<(Entity, &Transform, &mut Visibility), With<AntType>>,
     mut query: Query<(
         &Actor,
         &mut ActionState,
         &mut OutsideMapDiscoveringNewFoodAction,
     )>,
-    mut carry_food_writer: EventWriter<CarryFoodEvent>,
+    mut carry_food_writer: EventWriter<AddFoodForAntToCarryEvent>,
 ) {
     for (Actor(actor), mut state, mut action) in query.iter_mut() {
-        let Ok((entity, mut visibility)) = ants.get_mut(*actor) else {
-            warn!(?actor, "No visibility found.");
+        let Ok((entity, transform, mut visibility)) = ants.get_mut(*actor) else {
+            warn!(?actor, "No transform + visibility found with AntType.");
             continue;
         };
 
         match *state {
             ActionState::Requested => {
                 let time_left = food_state.next_discover_time.get_and_increase();
+                action.initial_time = time_left;
                 action.time_left = time_left;
                 *state = ActionState::Executing;
             }
@@ -94,7 +100,15 @@ pub fn outside_map_discovering_food_action(
                 *visibility = Visibility::Visible;
 
                 // Give the ant some food to carry.
-                carry_food_writer.send(CarryFoodEvent::new(entity, FoodType::MedicinePill));
+                carry_food_writer.send(AddFoodForAntToCarryEvent::discovered(
+                    entity,
+                    DiscoveredFood {
+                        food: FoodType::MedicinePill,
+                        position: SideIPos::from(transform),
+                        time_to_discover: action.initial_time,
+                        remaining: 20000,
+                    },
+                ));
 
                 *state = ActionState::Success;
             }
@@ -145,7 +159,7 @@ pub fn move_to_queen_action(
 
 /// The scout ant is offering new food to the queen.
 #[derive(Clone, Component, Debug, ActionBuilder)]
-pub struct OfferNewFoodToQueenAction;
+pub struct OfferFoodDiscoveryToQueenAction;
 
 /// Offer the food to the queen.
 ///
@@ -158,13 +172,14 @@ pub struct OfferNewFoodToQueenAction;
 /// * If rejected, the food is added to the food state as rejected food.
 ///   * The food vanishes (for now)
 /// * The game is unpaused.
-pub fn offer_new_food_to_queen_action(
+pub fn offer_food_discovery_to_queen_action(
+    mut commands: Commands,
     mut time: ResMut<GameTime>,
     mut contexts: EguiContexts,
     mut food_state: ResMut<FoodState>,
     mut ants: Query<(Entity, &Children), With<AntType>>,
-    carrying_food: Query<&CarryingFood>,
-    mut query: Query<(&Actor, &mut ActionState), With<OfferNewFoodToQueenAction>>,
+    carrying_discovered_food: Query<&CarryingDiscoveredFood>,
+    mut query: Query<(&Actor, &mut ActionState), With<OfferFoodDiscoveryToQueenAction>>,
 ) {
     for ((Actor(actor), mut state)) in query.iter_mut() {
         let Ok((entity, children)) = ants.get_mut(*actor) else {
@@ -175,19 +190,17 @@ pub fn offer_new_food_to_queen_action(
         // TODO: Check if we are at the queen's position!
 
         // Grab the food type.
-        let mut food_type = None;
+        let mut food_info = None;
         for &child in children.iter() {
-            let Ok(f) = carrying_food.get(child) else {
+            let Ok(f) = carrying_discovered_food.get(child) else {
                 continue;
             };
-            food_type = Some(f.clone());
+            food_info = Some((child, f.clone()));
         }
-        let Some(food_type) = food_type else {
+        let Some((food_entity, food_info)) = food_info else {
             error!(?entity, "No food found in child ants.");
             continue;
         };
-
-        info!(?food_type, "Offering new food to queen.");
 
         match *state {
             ActionState::Requested => {
@@ -196,30 +209,45 @@ pub fn offer_new_food_to_queen_action(
             }
             ActionState::Executing => {
                 // Show an egui dialog. TODO: Should probably be in another system!
+                // TODO: This is flickering. Maybe putting it in another system might help?
 
-                info!("Executing offer");
+                egui::Window::new("Queen's Choice")
+                    .anchor(Align2::CENTER_CENTER, egui::Vec2::ZERO)
+                    .show(&contexts.ctx_mut(), |ui| {
+                        ui.heading("This scout has found new food!");
+                        ui.label(format!("Food Type: {:?}", *food_info));
+                        ui.heading("This is fake info for now (:");
+                        ui.label(" + The Queen grows eggs 2x faster.");
+                        ui.label(" - The Queen needs 3x as much food.");
+                        ui.label(" + New ants walk 3x faster");
+                        ui.label(" - Ants eat 2x slower");
+                        ui.label("Do you want to add this food to the colony?");
+                        ui.horizontal(|ui| {
+                            let mut done = false;
 
-                egui::Window::new("Queen's Choice").show(&contexts.ctx_mut(), |ui| {
-                    ui.heading("This scout has found new food!");
-                    ui.label(format!("Food Type: {:?}", *food_type));
-                    ui.label(" + The Queen's eggs hatch 2x as many ants.");
-                    ui.label(" - The Queen needs 3x as much food.");
-                    ui.label(" + New ants are 3x faster");
-                    ui.label(" - Ants eat 2x slower");
-                    ui.label("Do you want to add this food to the colony?");
-                    ui.horizontal(|ui| {
-                        if ui.button("Yes").clicked() {
-                            // Add the food to the food state.
-                            // food_state.add_approved_food(food_type);
-                            // The queen eats it even if she is full.
-                        }
-                        if ui.button("No").clicked() {
-                            // Add the food to the food state.
-                            // food_state.add_rejected_food(food_type);
-                            // The food vanishes (for now)
-                        }
+                            if ui.button("Yes").clicked() {
+                                // Add the food to the food state.
+                                food_state.approve_food(**food_info);
+
+                                // TODO: The queen eats the new food even if she is full.
+
+                                done = true;
+                            }
+                            if ui.button("No").clicked() {
+                                // TODO: The queen eats the ant even if she is full.
+                                // Food just vanishes.
+
+                                food_state.reject_food(food_info.food);
+                                done = true;
+                            }
+
+                            if done {
+                                commands.entity(food_entity).despawn_recursive();
+                                time.system_pause(false);
+                                *state = ActionState::Success;
+                            }
+                        });
                     });
-                });
             }
             _ => {}
         }

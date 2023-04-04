@@ -5,43 +5,72 @@ use rand::Rng;
 use std::time::Duration;
 
 /// Add food to an ant to carry. If they have some food already we should probably drop it.
-pub struct CarryFoodEvent {
+pub struct AddFoodForAntToCarryEvent {
     pub entity: Entity,
-    pub food: FoodType,
+    pub data: CarryFoodType,
 }
 
-impl CarryFoodEvent {
-    pub fn new(entity: Entity, food: FoodType) -> Self {
-        Self { entity, food }
+pub enum CarryFoodType {
+    Food(FoodType),
+    DiscoveredFood(DiscoveredFood),
+}
+
+impl AddFoodForAntToCarryEvent {
+    pub fn food(entity: Entity, food: FoodType) -> Self {
+        Self {
+            entity,
+            data: CarryFoodType::Food(food),
+        }
+    }
+
+    pub fn discovered(entity: Entity, discovered: DiscoveredFood) -> Self {
+        Self {
+            entity,
+            data: CarryFoodType::DiscoveredFood(discovered),
+        }
     }
 }
 
-/// Note: attached as child of the ant.
+/// Specifically for scout ants that have discovered a new food.
+/// Note: Attached to a child of the ant.
+#[derive(Component, Deref, Debug)]
+pub struct CarryingDiscoveredFood(DiscoveredFood);
+
+/// All other cases of carrying food, e.g.:
+/// - carrying food from outside to the food store
+/// - carrying food for the queen to eat
+///
+/// Note: Attached to a child of the ant.
 #[derive(Component, Deref, Debug)]
 pub struct CarryingFood(FoodType);
 
 pub fn attach_food_to_ant(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut events: EventReader<CarryFoodEvent>,
+    mut events: EventReader<AddFoodForAntToCarryEvent>,
 ) {
     for event in events.iter() {
         // TODO: Drop the food if the ant already has some.
 
         // Add to the child of the ant.
-        let child_entity = commands
-            .spawn(SpriteBundle {
-                texture: asset_server.load("food/food.png"),
-                ..Default::default()
-            })
-            .insert(CarryingFood(event.food))
-            .id();
+        let mut child_entity = commands.spawn(SpriteBundle {
+            texture: asset_server.load("food/food.png"),
+            ..Default::default()
+        });
+
+        match event.data {
+            CarryFoodType::DiscoveredFood(discovered) => {
+                child_entity.insert(CarryingDiscoveredFood(discovered))
+            }
+            CarryFoodType::Food(food) => child_entity.insert(CarryingFood(food)),
+        };
+        let child_entity = child_entity.id();
 
         commands.entity(event.entity).push_children(&[child_entity]);
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum FoodType {
     Water,
     Apple,
@@ -57,17 +86,29 @@ pub enum FoodType {
     FrogsLeg,
 }
 
-pub struct FoundFood {
+#[derive(Copy, Clone, Debug)]
+pub struct DiscoveredFood {
     pub food: FoodType,
     pub position: SideIPos,
-    pub time: f32,
+    pub time_to_discover: Duration,
+    pub remaining: u32,
 }
 
 #[derive(Resource, Default)]
 pub struct FoodState {
-    pub approved: Vec<FoundFood>,
+    pub approved: Vec<DiscoveredFood>,
     pub rejected: HashSet<FoodType>,
     pub next_discover_time: NextDiscoverTime,
+}
+
+impl FoodState {
+    pub fn approve_food(&mut self, found: DiscoveredFood) {
+        self.approved.push(found);
+    }
+
+    pub fn reject_food(&mut self, food: FoodType) {
+        self.rejected.insert(food);
+    }
 }
 
 // TODO: 10s?
