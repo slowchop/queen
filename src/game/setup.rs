@@ -39,7 +39,7 @@ pub fn texture_atlas_sprite() -> TextureAtlasSprite {
 pub fn setup_map(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    // mut debug_lines: ResMut<DebugLines>,
+    mut debug_lines: ResMut<DebugLines>,
 ) {
     let mut side_map_pos_to_entities = HashMap::with_capacity(1_000);
 
@@ -56,16 +56,25 @@ pub fn setup_map(
     let width = 40;
 
     // Add exit points to the left and right on the surface for scout ants.
-    let exit_points = vec![
-        SideIPos::new(-width / 2 - 1, 0),
-        SideIPos::new(width / 2 + 1, 0),
-    ];
-    for exit_pos in exit_points {
+    for x in (-width / 2 - 1..width / 2 + 2).step_by(4) {
+        let exit_pos = SideIPos::new(x, 0);
         let cell = CellContent::empty_air();
         let entity_id = commands.spawn((exit_pos, cell, MapExit)).id();
         side_map_pos_to_entities.insert(exit_pos, entity_id);
         side_map_pos_to_cell.insert(exit_pos, cell);
         graph.add_node(exit_pos);
+
+        // Draw a line from the exit point to 0, 20
+        debug_lines.line_colored(
+            Vec3::new(
+                exit_pos.x as f32 * SIDE_CELL_SIZE as f32,
+                exit_pos.y as f32 * SIDE_CELL_SIZE as f32,
+                0.0,
+            ),
+            Vec3::new(0.0, 20.0, 0.0),
+            10.0,
+            Color::rgb(0.0, 1.0, 0.0),
+        );
     }
 
     for y in -30..20 {

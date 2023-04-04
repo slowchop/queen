@@ -28,7 +28,7 @@ impl AntType {
                 animation_indices: AnimationIndices { first: 0, last: 3 },
             },
             AntType::Cargo => AntSpawnData {
-                texture_path: "creatures/scout.png", // TODO: Wait for Jart's art
+                texture_path: "creatures/cargo.png",
                 columns: 4,
                 rows: 1,
                 animation_indices: AnimationIndices { first: 0, last: 3 },
