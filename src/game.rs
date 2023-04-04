@@ -11,6 +11,7 @@ mod plugin;
 mod positions;
 mod queen;
 mod setup;
+mod time;
 mod ui;
 
 pub use plugin::GamePlugin;

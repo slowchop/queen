@@ -59,6 +59,7 @@ fn main() -> Result<()> {
 
     // Input
     app.add_startup_system(input::setup);
+    app.add_system(input::reset_input_states.in_set(game::InputSet::Reset));
     app.add_systems(
         (
             input::process_keyboard_input,

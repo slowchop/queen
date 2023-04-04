@@ -3,6 +3,7 @@ use crate::game::eggs::Egg;
 use crate::game::pathfinding::Path;
 use crate::game::plugin::PlayerState;
 use crate::game::positions::SideIPos;
+use crate::game::time::GameTime;
 use bevy::prelude::*;
 
 #[derive(Debug)]
@@ -18,7 +19,7 @@ pub struct Queen {
 
 /// If the queen is at the laying spot and is set to laying mode, increase the egg progress.
 pub fn grow_and_lay_eggs(
-    time: Res<Time>,
+    time: Res<GameTime>,
     player_state: Res<PlayerState>,
     mut query: Query<(&mut Queen, &Transform)>,
     mut egg_laid_writer: EventWriter<EggLaidEvent>,

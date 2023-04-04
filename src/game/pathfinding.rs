@@ -1,5 +1,6 @@
 use crate::game::map::SIDE_CELL_SIZE;
 use crate::game::positions::SideIPos;
+use crate::game::time::GameTime;
 use bevy::prelude::*;
 use bevy::utils::petgraph::algo::astar;
 use bevy::utils::petgraph::prelude::{EdgeRef, UnGraphMap};
@@ -95,7 +96,7 @@ pub fn needs_path(
 }
 
 pub fn move_along_path(
-    time: Res<Time>,
+    time: Res<GameTime>,
     mut query: Query<(Entity, &mut Path, &mut Transform)>,
     mut visited_event_writer: EventWriter<VisitedNodeEvent>,
 ) {

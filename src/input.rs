@@ -6,6 +6,7 @@ use bevy::input::ButtonState;
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 use serde::{Deserialize, Serialize};
+use strum::IntoEnumIterator;
 
 #[derive(Resource, Deref, DerefMut)]
 pub struct KeyboardInputMap(HashMap<KeyCode, InputAction>);
@@ -50,19 +51,20 @@ pub struct ActionEvent {
     pub state: EventState,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, strum::EnumIter)]
 pub enum InputAction {
     Up,
     Down,
     Left,
     Right,
-    Jump,
     PrimaryAction,
     SecondaryAction,
-    Use,
-    Special,
     Confirm,
     Escape,
+    TogglePause,
+    Speed1,
+    Speed2,
+    Speed3,
 }
 
 pub fn setup(mut commands: Commands) {
@@ -80,9 +82,11 @@ pub fn setup(mut commands: Commands) {
     keyboard_input_map.insert(KeyCode::D, InputAction::Right);
 
     keyboard_input_map.insert(KeyCode::Return, InputAction::Confirm);
-    keyboard_input_map.insert(KeyCode::Space, InputAction::Jump);
-    keyboard_input_map.insert(KeyCode::E, InputAction::Use);
-    keyboard_input_map.insert(KeyCode::Q, InputAction::Special);
+
+    keyboard_input_map.insert(KeyCode::Space, InputAction::TogglePause);
+    keyboard_input_map.insert(KeyCode::Key1, InputAction::Speed1);
+    keyboard_input_map.insert(KeyCode::Key2, InputAction::Speed2);
+    keyboard_input_map.insert(KeyCode::Key3, InputAction::Speed3);
 
     mouse_button_input_map.insert(MouseButton::Left, InputAction::PrimaryAction);
     mouse_button_input_map.insert(MouseButton::Right, InputAction::SecondaryAction);
@@ -90,10 +94,22 @@ pub fn setup(mut commands: Commands) {
     commands.insert_resource(KeyboardInputMap(keyboard_input_map));
     commands.insert_resource(MouseButtonInputMap(mouse_button_input_map));
 
-    commands.insert_resource(InputStates(HashMap::new()));
+    let mut input_states = HashMap::new();
+    for action in InputAction::iter() {
+        input_states.insert(action, InputState::default());
+    }
+    commands.insert_resource(InputStates(input_states));
 
     // Add Event type to world
     commands.insert_resource(Events::<ActionEvent>::default());
+}
+
+pub fn reset_input_states(mut input_states: ResMut<InputStates>) {
+    // Set all "just_pressed" and "just_released" to false.
+    for state in input_states.values_mut() {
+        state.just_pressed = false;
+        state.just_released = false;
+    }
 }
 
 pub fn process_keyboard_input(
@@ -102,12 +118,6 @@ pub fn process_keyboard_input(
     mut keyboard_events: EventReader<KeyboardInput>,
     mut input_action_writer: EventWriter<ActionEvent>,
 ) {
-    // Set all "just_pressed" and "just_released" to false.
-    for state in input_states.values_mut() {
-        state.just_pressed = false;
-        state.just_released = false;
-    }
-
     for event in keyboard_events.iter() {
         let Some(key_code) = event.key_code else {
             continue;
@@ -115,33 +125,39 @@ pub fn process_keyboard_input(
         let Some(action) = keyboard_input_map.get(&key_code) else {
             continue;
         };
-        let (input_state, event_state) = match event.state {
-            ButtonState::Pressed => (
-                InputState {
-                    is_pressed: true,
-                    just_pressed: true,
-                    just_released: false,
-                },
-                EventState::Pressed,
-            ),
-            ButtonState::Released => (
-                InputState {
-                    is_pressed: false,
-                    just_pressed: false,
-                    just_released: true,
-                },
-                EventState::Released,
-            ),
+
+        let Some(existing_state) = input_states.get_mut(action) else {
+            warn!("No input state for action: {:?}", action);
+            continue;
         };
 
-        input_states.insert(*action, input_state);
+        let event_state = match event.state {
+            ButtonState::Pressed => {
+                if existing_state.is_pressed {
+                    continue;
+                }
+
+                existing_state.is_pressed = true;
+                existing_state.just_pressed = true;
+                EventState::Pressed
+            }
+            ButtonState::Released => {
+                if !existing_state.is_pressed {
+                    continue;
+                }
+
+                existing_state.is_pressed = false;
+                existing_state.just_released = true;
+                EventState::Released
+            }
+        };
 
         input_action_writer.send(ActionEvent {
             action: *action,
             state: event_state,
         });
 
-        // info!("Keyboard event: {:?}", event);
+        info!("Keyboard event: {:?}", event);
     }
 }
 
@@ -151,12 +167,6 @@ pub fn process_mouse_input(
     mut mouse_button_events: EventReader<MouseButtonInput>,
     mut input_action_writer: EventWriter<ActionEvent>,
 ) {
-    // Set all "just_pressed" and "just_released" to false.
-    for state in input_states.values_mut() {
-        state.just_pressed = false;
-        state.just_released = false;
-    }
-
     for event in mouse_button_events.iter() {
         let Some(action) = mouse_button_input_map.get(&event.button) else {
             continue;

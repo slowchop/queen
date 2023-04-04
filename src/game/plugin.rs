@@ -6,7 +6,7 @@ use crate::game::map::CellChangedEvent;
 use crate::game::pathfinding::VisitedNodeEvent;
 use crate::game::positions::SideIPos;
 use crate::game::queen::{EggLaidEvent, Queen};
-use crate::game::{actions, camera, mouse, setup, ui};
+use crate::game::{actions, camera, mouse, setup, time, ui};
 use bevy::app::{App, Plugin};
 use bevy::prelude::*;
 use bevy::utils::HashMap;
@@ -50,6 +50,7 @@ impl Plugin for GamePlugin {
         app.add_event::<EggLaidEvent>();
         app.add_event::<SpawnAntEvent>();
 
+        app.insert_resource(time::GameTime::default());
         app.insert_resource(ui::IsHoveringOverUi::default());
         app.insert_resource(PlayerState::default());
         app.insert_resource(Jobs::default());
@@ -64,14 +65,15 @@ impl Plugin for GamePlugin {
         ));
 
         // Reset
-        app.add_systems((ui::reset_hovering_over_ui_flag,).in_set(InputSet::Reset));
+        app.add_systems((time::new_frame, ui::reset_hovering_over_ui_flag).in_set(InputSet::Reset));
 
         // Ui
         app.add_systems((ui::control,).in_set(InputSet::Ui));
 
         // ProcessInput
         app.add_systems(
-            (camera::control, actions::primary_mouse_click).in_set(InputSet::ProcessInput),
+            (camera::control, actions::primary_mouse_click, time::input)
+                .in_set(InputSet::ProcessInput),
         );
 
         // Raycast
@@ -94,6 +96,12 @@ impl Plugin for GamePlugin {
             )
                 .in_set(InputSet::Game),
         );
+
+        app.configure_set(InputSet::Reset.before(InputSet::Ui));
+        app.configure_set(InputSet::Ui.before(InputSet::GetInput));
+        app.configure_set(InputSet::GetInput.before(InputSet::ProcessInput));
+        app.configure_set(InputSet::ProcessInput.before(InputSet::Raycast));
+        app.configure_set(InputSet::Raycast.before(InputSet::Game));
     }
 
     fn name(&self) -> &str {

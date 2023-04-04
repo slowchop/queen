@@ -1,3 +1,4 @@
+use crate::game::time::GameTime;
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -10,7 +11,7 @@ pub struct AnimationIndices {
 pub struct AnimationTimer(pub Timer);
 
 pub fn animate_sprites(
-    time: Res<Time>,
+    time: Res<GameTime>,
     mut query: Query<(
         &AnimationIndices,
         &mut AnimationTimer,

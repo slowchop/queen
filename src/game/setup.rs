@@ -2,7 +2,7 @@ use crate::game::animation::{AnimationIndices, AnimationTimer};
 use crate::game::camera::CameraFocus;
 use crate::game::eggs::Egg;
 use crate::game::jobs::Assignment;
-use crate::game::map::{CellContent, SideMapPosToEntities, SIDE_CELL_SIZE};
+use crate::game::map::{CellContent, MapExit, SideMapPosToEntities, SIDE_CELL_SIZE};
 use crate::game::pathfinding::{Path, SideMapGraph};
 use crate::game::plugin::{Crawler, Hunger, PlayerState, Speed, ANT_Z, DIRT_Z, QUEEN_Z};
 use crate::game::positions::SideIPos;
@@ -60,12 +60,12 @@ pub fn setup_map(
         SideIPos::new(-width / 2 - 1, 0),
         SideIPos::new(width / 2 + 1, 0),
     ];
-    for exit_point in exit_points {
+    for exit_pos in exit_points {
         let cell = CellContent::empty_air();
-        let entity_id = commands.spawn((exit_point, cell)).id();
-        side_map_pos_to_entities.insert(exit_point, entity_id);
-        side_map_pos_to_cell.insert(exit_point, cell);
-        graph.add_node(exit_point);
+        let entity_id = commands.spawn((exit_pos, cell, MapExit)).id();
+        side_map_pos_to_entities.insert(exit_pos, entity_id);
+        side_map_pos_to_cell.insert(exit_pos, cell);
+        graph.add_node(exit_pos);
     }
 
     for y in -30..20 {

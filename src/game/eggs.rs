@@ -3,6 +3,7 @@ use crate::game::plugin::EGG_Z;
 use crate::game::positions::SideIPos;
 use crate::game::queen::EggLaidEvent;
 use crate::game::setup::sprite;
+use crate::game::time::GameTime;
 use bevy::asset::AssetServer;
 use bevy::prelude::*;
 
@@ -49,7 +50,7 @@ pub fn spawn_eggs(
 
 pub fn grow_eggs(
     mut commands: Commands,
-    time: Res<Time>,
+    time: Res<GameTime>,
     mut query: Query<(Entity, &mut Egg, &Transform)>,
     mut spawn_ant_writer: EventWriter<SpawnAntEvent>,
 ) {
