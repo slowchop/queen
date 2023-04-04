@@ -58,6 +58,7 @@ impl Plugin for GamePlugin {
         app.insert_resource(ui::IsHoveringOverUi::default());
         app.insert_resource(PlayerState::default());
         app.insert_resource(Jobs::default());
+        app.insert_resource(NextFoodMaxTime::default());
 
         app.add_startup_systems((
             camera::setup,
@@ -109,7 +110,13 @@ impl Plugin for GamePlugin {
         app.configure_set(InputSet::Raycast.before(InputSet::Game));
 
         // Brain things
-        app.add_systems((brains::leave_map_action,).in_set(BigBrainSet::Actions));
+        app.add_systems(
+            (
+                brains::leave_map_action,
+                brains::outside_map_discovering_food_action,
+            )
+                .in_set(BigBrainSet::Actions),
+        );
         // app.add_system_to_stage(BigBrainStage::Scorers, ());
     }
 

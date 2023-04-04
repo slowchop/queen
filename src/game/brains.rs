@@ -1,11 +1,14 @@
 use crate::game::ants::AntType;
+use crate::game::food::FoodState;
 use crate::game::hunger::Hunger;
 use crate::game::map::ExitPositions;
 use crate::game::pathfinding::Path;
 use crate::game::positions::SideIPos;
+use crate::game::time::GameTime;
 use bevy::prelude::*;
 use big_brain::prelude::*;
 use rand::prelude::SliceRandom;
+use std::time::Duration;
 
 /// A scout or cargo ant to leave the map for food.
 #[derive(Clone, Component, Debug, ActionBuilder)]
@@ -53,10 +56,46 @@ pub fn leave_map_action(
 }
 
 /// The ant is off the map going to get new food.
-#[derive(Clone, Component, Debug, ActionBuilder)]
-pub struct OutsideMapGettingNewFoodAction;
+#[derive(Clone, Component, Debug, ActionBuilder, Default)]
+pub struct OutsideMapDiscoveringNewFoodAction {
+    pub time_left: Duration,
+}
 
-pub fn outside_map_getting_new_food_action()
+pub fn outside_map_discovering_food_action(
+    time: Res<GameTime>,
+    mut food_state: ResMut<FoodState>,
+    mut ants: Query<(&mut Visibility), With<AntType>>,
+    mut query: Query<(
+        &Actor,
+        &mut ActionState,
+        &mut OutsideMapDiscoveringNewFoodAction,
+    )>,
+) {
+    for (Actor(actor), mut state, mut action) in query.iter_mut() {
+        let Ok((mut visibility)) = ants.get_mut(*actor) else {
+            warn!(?actor, "No visibility found.");
+            continue;
+        };
+
+        match *state {
+            ActionState::Requested => {
+                let time_left = food_state.next_discover_time.get_and_increase();
+                *action.time_left = time_left;
+                *state = ActionState::Requested;
+            }
+            ActionState::Executing => {
+                action.time_left = action.time_left.saturating_sub(time.delta());
+                if action.time_left != Duration::ZERO {
+                    continue;
+                }
+
+                *visibility = Visibility::Visible;
+                *state = ActionState::Success;
+            }
+            _ => {}
+        }
+    }
+}
 
 /// The ant is off the map going to get approved food.
 #[derive(Clone, Component, Debug, ActionBuilder)]
