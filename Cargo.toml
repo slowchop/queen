@@ -1,5 +1,5 @@
 [package]
-name = "colony_side_effects"
+name = "queen"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -16,6 +16,7 @@ rand = "0.8.5"
 getrandom = { version = "0.2.8", features = ["js"] }
 pathfinding = "4.2.1"
 strum = { version = "0.24.1", features = ["derive"] }
+big-brain = "0.17.0"
 
 # Enable a small amount of optimization in debug mode
 [profile.dev]

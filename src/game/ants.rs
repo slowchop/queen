@@ -1,15 +1,21 @@
 use crate::game::animation::{AnimationIndices, AnimationTimer};
+use crate::game::brains::{
+    EatAction, HungryScorer, LeaveMapAction, MoveToFoodAction, MoveToQueenAction,
+    OutsideMapGettingNewFoodAction,
+};
 use crate::game::eggs::SpawnAntEvent;
+use crate::game::hunger::Hunger;
 use crate::game::jobs::Assignment;
 use crate::game::map::SIDE_CELL_SIZE;
 use crate::game::pathfinding::Path;
-use crate::game::plugin::{Crawler, Hunger, Speed, ANT_Z};
+use crate::game::plugin::{Crawler, Speed, ANT_Z};
 use crate::game::positions::SideIPos;
 use crate::game::queen::EggLaidEvent;
 use crate::game::setup::{sprite, texture_atlas_sprite};
 use bevy::prelude::*;
+use big_brain::prelude::*;
 
-#[derive(Debug, Eq, PartialEq, Default, Copy, Clone)]
+#[derive(Component, Debug, Eq, PartialEq, Default, Copy, Clone)]
 pub enum AntType {
     #[default]
     Scout,
@@ -84,11 +90,34 @@ pub fn spawn_ants(
             ..Default::default()
         };
 
+        let move_and_eat = Steps::build()
+            .label("MoveAndEat")
+            .step(MoveToFoodAction)
+            .step(EatAction);
+
+        let find_new_food = Steps::build()
+            .label("FindNewFood")
+            .step(LeaveMapAction)
+            .step(OutsideMapGettingNewFoodAction)
+            .step(MoveToQueenAction);
+
+        let thinker = match ant_type {
+            AntType::Scout => Thinker::build()
+                .label("scout")
+                .picker(FirstToScore { threshold: 0.5 })
+                .when(HungryScorer, move_and_eat)
+                .otherwise(find_new_food),
+
+            _ => todo!(),
+        };
+
         commands.spawn((
             sprite_sheet_bundle,
             animation_indices,
             AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
             Crawler,
+            *ant_type,
+            thinker,
             Speed::default(),
             Hunger::default(),
             Assignment::None,

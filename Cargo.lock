@@ -1018,6 +1018,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "big-brain"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20da289393d5abee7043d7045bdc50bce06d6bffd29816c89934c6c31d8b8847"
+dependencies = [
+ "bevy",
+ "big-brain-derive",
+]
+
+[[package]]
+name = "big-brain-derive"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2166ff5dd1fae091887288f174ee6aef82f349b1a6edcf983fd379ab6df49c0d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "bindgen"
 version = "0.64.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1187,22 +1208,6 @@ checksum = "3538270d33cc669650c4b093848450d380def10c331d38c768e34cac80576e6e"
 dependencies = [
  "termcolor",
  "unicode-width",
-]
-
-[[package]]
-name = "colony_side_effects"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bevy_egui",
- "bevy_prototype_debug_lines",
- "color-eyre",
- "getrandom",
- "pathfinding",
- "rand",
- "serde",
- "serde_yaml",
- "strum",
 ]
 
 [[package]]
@@ -2774,6 +2779,23 @@ name = "profiling"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "74605f360ce573babfe43964cbe520294dcb081afbf8c108fc6e23036b4da2df"
+
+[[package]]
+name = "queen"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_egui",
+ "bevy_prototype_debug_lines",
+ "big-brain",
+ "color-eyre",
+ "getrandom",
+ "pathfinding",
+ "rand",
+ "serde",
+ "serde_yaml",
+ "strum",
+]
 
 [[package]]
 name = "quote"

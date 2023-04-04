@@ -1,8 +1,11 @@
 mod actions;
 mod animation;
 mod ants;
+mod approved;
+mod brains;
 mod camera;
 mod eggs;
+mod hunger;
 mod jobs;
 mod map;
 mod mouse;

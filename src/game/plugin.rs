@@ -6,10 +6,12 @@ use crate::game::map::CellChangedEvent;
 use crate::game::pathfinding::VisitedNodeEvent;
 use crate::game::positions::SideIPos;
 use crate::game::queen::{EggLaidEvent, Queen};
-use crate::game::{actions, camera, mouse, setup, time, ui};
+use crate::game::time::GameTime;
+use crate::game::{actions, brains, camera, mouse, setup, time, ui};
 use bevy::app::{App, Plugin};
 use bevy::prelude::*;
 use bevy::utils::HashMap;
+use big_brain::prelude::*;
 
 pub const DIRT_Z: f32 = 0f32;
 pub const QUEEN_Z: f32 = 1f32;
@@ -45,6 +47,8 @@ pub enum InputSet {
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
+        app.add_plugin(BigBrainPlugin);
+
         app.add_event::<VisitedNodeEvent>();
         app.add_event::<CellChangedEvent>();
         app.add_event::<EggLaidEvent>();
@@ -93,6 +97,7 @@ impl Plugin for GamePlugin {
                 game::eggs::grow_eggs,
                 game::animation::animate_sprites,
                 game::ants::spawn_ants,
+                game::hunger::hunger_system,
             )
                 .in_set(InputSet::Game),
         );
@@ -102,6 +107,10 @@ impl Plugin for GamePlugin {
         app.configure_set(InputSet::GetInput.before(InputSet::ProcessInput));
         app.configure_set(InputSet::ProcessInput.before(InputSet::Raycast));
         app.configure_set(InputSet::Raycast.before(InputSet::Game));
+
+        // Brain things
+        app.add_systems((brains::leave_map_action,).in_set(BigBrainSet::Actions));
+        // app.add_system_to_stage(BigBrainStage::Scorers, ());
     }
 
     fn name(&self) -> &str {
@@ -150,32 +159,5 @@ impl Speed {
 impl Default for Speed {
     fn default() -> Self {
         Self::new(1.0)
-    }
-}
-
-#[derive(Component)]
-pub struct Hunger {
-    current: u16,
-    hungry_at: u16,
-    starving_at: u16,
-}
-
-impl Hunger {
-    pub fn new(hungry_at: u16, starving_at: u16) -> Self {
-        Self {
-            current: 0,
-            hungry_at,
-            starving_at,
-        }
-    }
-
-    pub fn starving_offset(&self) -> u16 {
-        self.starving_at.saturating_sub(self.current)
-    }
-}
-
-impl Default for Hunger {
-    fn default() -> Self {
-        Self::new(100, 200)
     }
 }

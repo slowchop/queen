@@ -23,7 +23,14 @@ pub fn grow_and_lay_eggs(
     player_state: Res<PlayerState>,
     mut query: Query<(&mut Queen, &Transform)>,
     mut egg_laid_writer: EventWriter<EggLaidEvent>,
+    mut debug: Local<u32>,
 ) {
+    *debug += 1;
+    if *debug % 1000 == 0 {
+        warn!("Disabled lay eggs");
+    }
+    return;
+
     for (mut queen, transform) in query.iter_mut() {
         let pos = SideIPos::from(transform);
 

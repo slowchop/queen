@@ -35,6 +35,10 @@ pub enum Path {
     NeedsPath(SideIPos),
     /// We have a path and are progressing towards the target.
     Progress(PathProgress),
+    /// Made it
+    Completed(SideIPos),
+    /// Could not create a path to the target.
+    Failed(SideIPos),
 }
 
 impl Path {
@@ -46,12 +50,22 @@ impl Path {
         *self = Path::None;
     }
 
-    pub fn has_target(&self) -> bool {
+    pub fn is_progressing(&self) -> bool {
         matches!(self, Path::Progress(_)) || matches!(self, Path::NeedsPath(_))
     }
 
-    pub fn has_no_path(&self) -> bool {
-        matches!(self, Path::None)
+    pub fn get_completed_position(&self) -> Option<SideIPos> {
+        match self {
+            Path::Completed(pos) => Some(*pos),
+            _ => None,
+        }
+    }
+
+    pub fn did_fail(&self) -> Option<SideIPos> {
+        match self {
+            Path::Failed(pos) => Some(*pos),
+            _ => None,
+        }
     }
 }
 
@@ -70,6 +84,11 @@ pub fn needs_path(
         };
 
         let start = SideIPos::from(transform);
+
+        if start == *goal {
+            *path = Path::Completed(*goal);
+            continue;
+        }
 
         let result = astar(
             &**graph,
@@ -90,7 +109,7 @@ pub fn needs_path(
             });
         } else {
             warn!("No path found!");
-            *path = Path::None;
+            *path = Path::Failed(*goal);
         }
     }
 }
@@ -136,9 +155,9 @@ pub fn move_along_path(
             visited_event_writer.send(event);
 
             // Remove the current step from the path.
-            remaining_steps.remove(0);
+            let popped_step = remaining_steps.remove(0);
             let Some(next_step) = remaining_steps.get(0) else {
-                *path = Path::None;
+                *path = Path::Completed(popped_step);
                 continue;
             };
 

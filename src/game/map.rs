@@ -8,9 +8,14 @@ use bevy_prototype_debug_lines::DebugLines;
 
 pub const SIDE_CELL_SIZE: u8 = 32;
 
-/// A position in the world when an ant can "exit" the map to look for food.
-#[derive(Component)]
-pub struct MapExit;
+#[derive(Resource, Deref, DerefMut)]
+pub struct ExitPositions(Vec<SideIPos>);
+
+impl From<Vec<SideIPos>> for ExitPositions {
+    fn from(exits: Vec<SideIPos>) -> Self {
+        Self(exits)
+    }
+}
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct CellChangedEvent(Entity);

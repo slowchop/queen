@@ -1,10 +1,11 @@
 use crate::game::animation::{AnimationIndices, AnimationTimer};
 use crate::game::camera::CameraFocus;
 use crate::game::eggs::Egg;
+use crate::game::hunger::Hunger;
 use crate::game::jobs::Assignment;
-use crate::game::map::{CellContent, MapExit, SideMapPosToEntities, SIDE_CELL_SIZE};
+use crate::game::map::{CellContent, ExitPositions, SideMapPosToEntities, SIDE_CELL_SIZE};
 use crate::game::pathfinding::{Path, SideMapGraph};
-use crate::game::plugin::{Crawler, Hunger, PlayerState, Speed, ANT_Z, DIRT_Z, QUEEN_Z};
+use crate::game::plugin::{Crawler, PlayerState, Speed, ANT_Z, DIRT_Z, QUEEN_Z};
 use crate::game::positions::SideIPos;
 use crate::game::queen::{EggLaidEvent, Queen};
 use bevy::asset::AssetServer;
@@ -54,28 +55,6 @@ pub fn setup_map(
     let queen_room_height = 3;
 
     let width = 40;
-
-    // Add exit points to the left and right on the surface for scout ants.
-    for x in (-width / 2 - 1..width / 2 + 2).step_by(4) {
-        let exit_pos = SideIPos::new(x, 0);
-        let cell = CellContent::empty_air();
-        let entity_id = commands.spawn((exit_pos, cell, MapExit)).id();
-        side_map_pos_to_entities.insert(exit_pos, entity_id);
-        side_map_pos_to_cell.insert(exit_pos, cell);
-        graph.add_node(exit_pos);
-
-        // Draw a line from the exit point to 0, 20
-        debug_lines.line_colored(
-            Vec3::new(
-                exit_pos.x as f32 * SIDE_CELL_SIZE as f32,
-                exit_pos.y as f32 * SIDE_CELL_SIZE as f32,
-                0.0,
-            ),
-            Vec3::new(0.0, 20.0, 0.0),
-            10.0,
-            Color::rgb(0.0, 1.0, 0.0),
-        );
-    }
 
     for y in -30..20 {
         for x in -width / 2..(width / 2 + 1) {
@@ -177,6 +156,26 @@ pub fn setup_map(
     // Finally own the dirt map and set the resource.
     commands.insert_resource(SideMapPosToEntities::from(side_map_pos_to_entities));
     commands.insert_resource(SideMapGraph::from(graph));
+
+    // Add exit points on the surface
+    let mut exit_positions = Vec::new();
+    for x in (-width / 2 - 1..width / 2 + 2).step_by(4) {
+        let exit_pos = SideIPos::new(x, 0);
+        exit_positions.push(exit_pos);
+
+        // Draw a line from the exit point to 0, 20
+        debug_lines.line_colored(
+            Vec3::new(
+                exit_pos.x as f32 * SIDE_CELL_SIZE as f32,
+                exit_pos.y as f32 * SIDE_CELL_SIZE as f32,
+                0.0,
+            ),
+            Vec3::new(0.0, 20.0, 0.0),
+            10.0,
+            Color::rgb(0.0, 1.0, 0.0),
+        );
+    }
+    commands.insert_resource(ExitPositions::from(exit_positions));
 
     // Explicitly drop the temporary side_map_pos_to_cell, just as a reminder that it's temporary.
     drop(side_map_pos_to_cell);
