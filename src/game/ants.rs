@@ -63,23 +63,6 @@ pub fn spawn_ants(
     mut spawn_ant_reader: EventReader<SpawnAntEvent>,
 ) {
     for SpawnAntEvent { ant_type, position } in spawn_ant_reader.iter() {
-        // match ant_type {
-        //     AntType::Scout => ["creatures/scout.png"],
-        // }
-        //
-        // // TODO: Different ants configured in a yaml?
-        // let texture_handle = asset_server.load("creatures/soldier.png");
-        // let texture_atlas = TextureAtlas::from_grid(
-        //     texture_handle,
-        //     Vec2::new(SIDE_CELL_SIZE as f32, SIDE_CELL_SIZE as f32),
-        //     4,
-        //     1,
-        //     None,
-        //     None,
-        // );
-        // let texture_atlas = texture_atlases.add(texture_atlas);
-        // let animation_indices = AnimationIndices { first: 0, last: 3 };
-
         let ant_spawn_data = ant_type.spawn_data();
         let texture_handle = asset_server.load(ant_spawn_data.texture_path);
         let texture_atlas = TextureAtlas::from_grid(
