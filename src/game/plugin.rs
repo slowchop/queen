@@ -1,13 +1,14 @@
 use crate::game;
 use crate::game::ants::AntType;
 use crate::game::eggs::SpawnAntEvent;
+use crate::game::food::CarryFoodEvent;
 use crate::game::jobs::Jobs;
 use crate::game::map::CellChangedEvent;
 use crate::game::pathfinding::VisitedNodeEvent;
 use crate::game::positions::SideIPos;
 use crate::game::queen::{EggLaidEvent, Queen};
 use crate::game::time::GameTime;
-use crate::game::{actions, brains, camera, mouse, setup, time, ui};
+use crate::game::{actions, brains, camera, food, mouse, setup, time, ui};
 use bevy::app::{App, Plugin};
 use bevy::prelude::*;
 use bevy::utils::HashMap;
@@ -53,12 +54,13 @@ impl Plugin for GamePlugin {
         app.add_event::<CellChangedEvent>();
         app.add_event::<EggLaidEvent>();
         app.add_event::<SpawnAntEvent>();
+        app.add_event::<CarryFoodEvent>();
 
-        app.insert_resource(time::GameTime::default());
+        app.insert_resource(GameTime::default());
         app.insert_resource(ui::IsHoveringOverUi::default());
         app.insert_resource(PlayerState::default());
         app.insert_resource(Jobs::default());
-        app.insert_resource(NextFoodMaxTime::default());
+        app.insert_resource(food::FoodState::default());
 
         app.add_startup_systems((
             camera::setup,
@@ -99,6 +101,7 @@ impl Plugin for GamePlugin {
                 game::animation::animate_sprites,
                 game::ants::spawn_ants,
                 game::hunger::hunger_system,
+                game::food::attach_food_to_ant,
             )
                 .in_set(InputSet::Game),
         );
@@ -148,13 +151,10 @@ pub enum ActionMode {
     // SetLayingPosition,
 }
 
-/// A creature that crawls around the world and uses pathfinding.
-///
-/// This is removed from the queen when in breeding mode.
 #[derive(Component)]
 pub struct Crawler;
 
-#[derive(Component)]
+#[derive(Component, Deref, DerefMut)]
 pub struct Speed(f32);
 
 impl Speed {
@@ -165,6 +165,6 @@ impl Speed {
 
 impl Default for Speed {
     fn default() -> Self {
-        Self::new(1.0)
+        Self::new(32.0)
     }
 }

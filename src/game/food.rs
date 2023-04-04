@@ -4,7 +4,36 @@ use bevy::utils::HashSet;
 use rand::Rng;
 use std::time::Duration;
 
-enum FoodType {
+/// Add food to an ant to carry. If they have some food already we should probably drop it.
+pub struct CarryFoodEvent {
+    pub entity: Entity,
+    pub food: FoodType,
+}
+
+impl CarryFoodEvent {
+    pub fn new(entity: Entity, food: FoodType) -> Self {
+        Self { entity, food }
+    }
+}
+
+pub fn attach_food_to_ant(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut events: EventReader<CarryFoodEvent>,
+) {
+    // TODO: Drop the food if the ant already has some.
+    for event in events.iter() {
+        // Add to the child of the ant.
+        commands.entity(event.entity).with_children(|parent| {
+            parent.spawn(SpriteBundle {
+                texture: asset_server.load("food/food.png"),
+                ..Default::default()
+            });
+        });
+    }
+}
+
+pub enum FoodType {
     Water,
     Apple,
     Banana,
@@ -20,12 +49,12 @@ enum FoodType {
 }
 
 pub struct FoundFood {
-    food: FoodType,
-    position: SideIPos,
-    time: f32,
+    pub food: FoodType,
+    pub position: SideIPos,
+    pub time: f32,
 }
 
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct FoodState {
     pub approved: Vec<FoundFood>,
     pub rejected: HashSet<FoodType>,
@@ -36,7 +65,7 @@ pub struct FoodState {
 const MIN_FOOD_TIME: f32 = 1f32;
 
 #[derive(Deref)]
-struct NextDiscoverTime(Duration);
+pub struct NextDiscoverTime(Duration);
 
 impl NextDiscoverTime {
     pub fn increase(&mut self) {

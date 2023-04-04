@@ -1,5 +1,5 @@
 use crate::game::ants::AntType;
-use crate::game::food::FoodState;
+use crate::game::food::{CarryFoodEvent, FoodState, FoodType};
 use crate::game::hunger::Hunger;
 use crate::game::map::ExitPositions;
 use crate::game::pathfinding::Path;
@@ -41,14 +41,13 @@ pub fn leave_map_action(
             }
             ActionState::Executing => {
                 // Check if path is complete and is at the exit position.
-                if path.get_completed_position().is_some() {
+                if path.did_complete() {
                     *visibility = Visibility::Hidden;
                     *state = ActionState::Success;
-                }
-
-                if path.did_fail() {
+                } else if path.did_fail() {
                     *state = ActionState::Failure;
                 }
+                // Still going to the exit position.
             }
             _ => {}
         }
@@ -64,15 +63,16 @@ pub struct OutsideMapDiscoveringNewFoodAction {
 pub fn outside_map_discovering_food_action(
     time: Res<GameTime>,
     mut food_state: ResMut<FoodState>,
-    mut ants: Query<(&mut Visibility), With<AntType>>,
+    mut ants: Query<(Entity, &mut Visibility), With<AntType>>,
     mut query: Query<(
         &Actor,
         &mut ActionState,
         &mut OutsideMapDiscoveringNewFoodAction,
     )>,
+    mut carry_food_writer: EventWriter<CarryFoodEvent>,
 ) {
     for (Actor(actor), mut state, mut action) in query.iter_mut() {
-        let Ok((mut visibility)) = ants.get_mut(*actor) else {
+        let Ok((entity, mut visibility)) = ants.get_mut(*actor) else {
             warn!(?actor, "No visibility found.");
             continue;
         };
@@ -80,16 +80,20 @@ pub fn outside_map_discovering_food_action(
         match *state {
             ActionState::Requested => {
                 let time_left = food_state.next_discover_time.get_and_increase();
-                *action.time_left = time_left;
-                *state = ActionState::Requested;
+                action.time_left = time_left;
+                *state = ActionState::Executing;
             }
             ActionState::Executing => {
                 action.time_left = action.time_left.saturating_sub(time.delta());
                 if action.time_left != Duration::ZERO {
                     continue;
                 }
-
+                // Ant is back on the map!
                 *visibility = Visibility::Visible;
+
+                // Give the ant some food to carry.
+                carry_food_writer.send(CarryFoodEvent::new(entity, FoodType::MedicinePill));
+
                 *state = ActionState::Success;
             }
             _ => {}

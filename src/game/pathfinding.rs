@@ -1,4 +1,5 @@
 use crate::game::map::SIDE_CELL_SIZE;
+use crate::game::plugin::Speed;
 use crate::game::positions::SideIPos;
 use crate::game::time::GameTime;
 use bevy::prelude::*;
@@ -54,6 +55,10 @@ impl Path {
         matches!(self, Path::Progress(_)) || matches!(self, Path::NeedsPath(_))
     }
 
+    pub fn did_complete(&self) -> bool {
+        matches!(self, Path::Completed(_))
+    }
+
     pub fn get_completed_position(&self) -> Option<SideIPos> {
         match self {
             Path::Completed(pos) => Some(*pos),
@@ -61,7 +66,11 @@ impl Path {
         }
     }
 
-    pub fn did_fail(&self) -> Option<SideIPos> {
+    pub fn did_fail(&self) -> bool {
+        matches!(self, Path::Failed(_))
+    }
+
+    pub fn get_failed_target(&self) -> Option<SideIPos> {
         match self {
             Path::Failed(pos) => Some(*pos),
             _ => None,
@@ -116,10 +125,10 @@ pub fn needs_path(
 
 pub fn move_along_path(
     time: Res<GameTime>,
-    mut query: Query<(Entity, &mut Path, &mut Transform)>,
+    mut query: Query<(Entity, &mut Path, &mut Transform, &Speed)>,
     mut visited_event_writer: EventWriter<VisitedNodeEvent>,
 ) {
-    for (entity, mut path, mut transform) in query.iter_mut() {
+    for (entity, mut path, mut transform, speed) in query.iter_mut() {
         let Path::Progress(progress) = &mut *path else {
             continue;
         };
@@ -134,7 +143,7 @@ pub fn move_along_path(
 
         let z = transform.translation.z;
         // "Speed"
-        let mut step_distance = 16f32 * time.delta_seconds();
+        let mut step_distance = **speed * time.delta_seconds();
         let mut next_step_position = next_step.to_world_vec2();
         let mut current_position = transform.translation.truncate();
         let distance = (current_position - next_step_position).length();

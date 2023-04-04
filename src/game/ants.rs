@@ -98,7 +98,7 @@ pub fn spawn_ants(
         let find_new_food = Steps::build()
             .label("FindNewFood")
             .step(LeaveMapAction)
-            .step(OutsideMapDiscoveringNewFoodAction)
+            .step(OutsideMapDiscoveringNewFoodAction::default())
             .step(MoveToQueenAction);
 
         let thinker = match ant_type {
