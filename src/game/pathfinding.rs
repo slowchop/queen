@@ -142,7 +142,6 @@ pub fn move_along_path(
         };
 
         let z = transform.translation.z;
-        // "Speed"
         let mut step_distance = **speed * time.delta_seconds();
         let mut next_step_position = next_step.to_world_vec2();
         let mut current_position = transform.translation.truncate();

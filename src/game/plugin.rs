@@ -1,7 +1,6 @@
 use crate::game;
 use crate::game::ants::AntType;
 use crate::game::eggs::SpawnAntEvent;
-use crate::game::food::CarryFoodEvent;
 use crate::game::jobs::Jobs;
 use crate::game::map::CellChangedEvent;
 use crate::game::pathfinding::VisitedNodeEvent;
@@ -54,7 +53,7 @@ impl Plugin for GamePlugin {
         app.add_event::<CellChangedEvent>();
         app.add_event::<EggLaidEvent>();
         app.add_event::<SpawnAntEvent>();
-        app.add_event::<CarryFoodEvent>();
+        app.add_event::<food::CarryFoodEvent>();
 
         app.insert_resource(GameTime::default());
         app.insert_resource(ui::IsHoveringOverUi::default());
@@ -117,6 +116,7 @@ impl Plugin for GamePlugin {
             (
                 brains::leave_map_action,
                 brains::outside_map_discovering_food_action,
+                brains::move_to_queen_action,
             )
                 .in_set(BigBrainSet::Actions),
         );
@@ -165,6 +165,6 @@ impl Speed {
 
 impl Default for Speed {
     fn default() -> Self {
-        Self::new(32.0)
+        Self::new(64.0)
     }
 }

@@ -4,6 +4,7 @@ use crate::game::hunger::Hunger;
 use crate::game::map::ExitPositions;
 use crate::game::pathfinding::Path;
 use crate::game::positions::SideIPos;
+use crate::game::queen::Queen;
 use crate::game::time::GameTime;
 use bevy::prelude::*;
 use big_brain::prelude::*;
@@ -108,6 +109,38 @@ pub struct OutsideMapGettingApprovedFoodAction;
 /// Move to The Queen!
 #[derive(Clone, Component, Debug, ActionBuilder)]
 pub struct MoveToQueenAction;
+
+pub fn move_to_queen_action(
+    queen: Query<&Transform, With<Queen>>,
+    mut ants: Query<&mut Path, With<AntType>>,
+    mut query: Query<(&Actor, &mut ActionState, &mut MoveToQueenAction)>,
+) {
+    for (Actor(actor), mut state, mut action) in query.iter_mut() {
+        let Ok(mut path) = ants.get_mut(*actor) else {
+            warn!(?actor, "No path found.");
+            continue;
+        };
+
+        match *state {
+            ActionState::Requested => {
+                let queen_transform = queen.single();
+                let queen_position = SideIPos::from(queen_transform);
+
+                path.set_target(queen_position);
+
+                *state = ActionState::Executing;
+            }
+            ActionState::Executing => {
+                if path.did_complete() {
+                    *state = ActionState::Success;
+                } else if path.did_fail() {
+                    *state = ActionState::Failure;
+                }
+            }
+            _ => {}
+        }
+    }
+}
 
 /// The scout ant is back on the map
 #[derive(Clone, Component, Debug, ActionBuilder)]
