@@ -1,5 +1,7 @@
 use crate::game::ants::AntType;
+use crate::game::hunger::Hunger;
 use crate::game::plugin::{ActionMode, PlayerState};
+use crate::game::queen::Queen;
 use bevy::prelude::*;
 use bevy_egui::egui::style::Spacing;
 use bevy_egui::egui::FontFamily::Proportional;
@@ -29,6 +31,7 @@ pub fn control(
     mut contexts: EguiContexts,
     mut player_state: ResMut<PlayerState>,
     mut is_hovering_over_ui: ResMut<IsHoveringOverUi>,
+    queen: Query<(&Hunger, &Queen)>,
 ) {
     let PlayerState {
         action_mode,
@@ -36,11 +39,22 @@ pub fn control(
         ..
     } = &mut *player_state;
 
+    let (queen_hunger, queen_info) = queen.single();
+
     let response = egui::TopBottomPanel::bottom("top_panel")
         .exact_height(80f32)
         .show(contexts.ctx_mut(), |ui| {
             ui.add_space(10f32);
+
             ui.horizontal_centered(|ui| {
+                ui.vertical(|ui| {
+                    ui.heading("Queen");
+                    ui.label(format!("Hunger: {:.1}%", queen_hunger.hunger_fraction()));
+                    ui.label(format!("Egg: {:.1}%", queen_info.egg_progress * 100f32));
+                });
+
+                ui.separator();
+
                 ui.vertical(|ui| {
                     ui.heading("Actions");
                     ui.horizontal_centered(|ui| {

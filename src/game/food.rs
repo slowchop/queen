@@ -119,7 +119,7 @@ pub struct NextDiscoverTime(Duration);
 
 impl NextDiscoverTime {
     pub fn increase(&mut self) {
-        self.0 *= 2;
+        self.0 = Duration::from_secs_f32(self.0.as_secs_f32() * 1.1f32) as Duration;
     }
 
     /// Random between MIN_FOOD_TIME and self

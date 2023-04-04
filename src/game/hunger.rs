@@ -20,6 +20,10 @@ impl Hunger {
     pub fn starving_offset(&self) -> f32 {
         (self.starving_at - self.current).max(0f32)
     }
+
+    pub fn hunger_fraction(&self) -> f32 {
+        self.current / self.hungry_at
+    }
 }
 
 impl Default for Hunger {
