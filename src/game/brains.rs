@@ -1,5 +1,5 @@
 use crate::game::ants::AntType;
-use crate::game::food::{CarryFoodEvent, FoodState, FoodType};
+use crate::game::food::{CarryFoodEvent, CarryingFood, FoodState, FoodType};
 use crate::game::hunger::Hunger;
 use crate::game::map::ExitPositions;
 use crate::game::pathfinding::Path;
@@ -7,6 +7,7 @@ use crate::game::positions::SideIPos;
 use crate::game::queen::Queen;
 use crate::game::time::GameTime;
 use bevy::prelude::*;
+use bevy_egui::{egui, EguiContexts};
 use big_brain::prelude::*;
 use rand::prelude::SliceRandom;
 use std::time::Duration;
@@ -142,9 +143,88 @@ pub fn move_to_queen_action(
     }
 }
 
-/// The scout ant is back on the map
+/// The scout ant is offering new food to the queen.
 #[derive(Clone, Component, Debug, ActionBuilder)]
 pub struct OfferNewFoodToQueenAction;
+
+/// Offer the food to the queen.
+///
+/// * Pause the game using a special system pause in GameTime. (TODO)
+/// * Show a dialog that looks modal with a summary of the food.
+/// * Wait for player to accept or reject the food.
+/// * If accepted:
+///   * The food is added to the food state as approved food.
+///   * The queen eats it even if she is full.
+/// * If rejected, the food is added to the food state as rejected food.
+///   * The food vanishes (for now)
+/// * The game is unpaused.
+pub fn offer_new_food_to_queen_action(
+    mut time: ResMut<GameTime>,
+    mut contexts: EguiContexts,
+    mut food_state: ResMut<FoodState>,
+    mut ants: Query<(Entity, &Children), With<AntType>>,
+    carrying_food: Query<&CarryingFood>,
+    mut query: Query<(&Actor, &mut ActionState), With<OfferNewFoodToQueenAction>>,
+) {
+    for ((Actor(actor), mut state)) in query.iter_mut() {
+        let Ok((entity, children)) = ants.get_mut(*actor) else {
+            warn!(?actor, "No children found.");
+            continue;
+        };
+
+        // TODO: Check if we are at the queen's position!
+
+        // Grab the food type.
+        let mut food_type = None;
+        for &child in children.iter() {
+            let Ok(f) = carrying_food.get(child) else {
+                continue;
+            };
+            food_type = Some(f.clone());
+        }
+        let Some(food_type) = food_type else {
+            error!(?entity, "No food found in child ants.");
+            continue;
+        };
+
+        info!(?food_type, "Offering new food to queen.");
+
+        match *state {
+            ActionState::Requested => {
+                time.system_pause(true);
+                *state = ActionState::Executing;
+            }
+            ActionState::Executing => {
+                // Show an egui dialog. TODO: Should probably be in another system!
+
+                info!("Executing offer");
+
+                egui::Window::new("Queen's Choice").show(&contexts.ctx_mut(), |ui| {
+                    ui.heading("This scout has found new food!");
+                    ui.label(format!("Food Type: {:?}", *food_type));
+                    ui.label(" + The Queen's eggs hatch 2x as many ants.");
+                    ui.label(" - The Queen needs 3x as much food.");
+                    ui.label(" + New ants are 3x faster");
+                    ui.label(" - Ants eat 2x slower");
+                    ui.label("Do you want to add this food to the colony?");
+                    ui.horizontal(|ui| {
+                        if ui.button("Yes").clicked() {
+                            // Add the food to the food state.
+                            // food_state.add_approved_food(food_type);
+                            // The queen eats it even if she is full.
+                        }
+                        if ui.button("No").clicked() {
+                            // Add the food to the food state.
+                            // food_state.add_rejected_food(food_type);
+                            // The food vanishes (for now)
+                        }
+                    });
+                });
+            }
+            _ => {}
+        }
+    }
+}
 
 /// When hungry or needs food for the queen, move to some food.
 #[derive(Clone, Component, Debug, ActionBuilder)]

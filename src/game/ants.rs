@@ -1,7 +1,7 @@
 use crate::game::animation::{AnimationIndices, AnimationTimer};
 use crate::game::brains::{
     EatAction, HungryScorer, LeaveMapAction, MoveToFoodAction, MoveToQueenAction,
-    OutsideMapDiscoveringNewFoodAction,
+    OfferNewFoodToQueenAction, OutsideMapDiscoveringNewFoodAction,
 };
 use crate::game::eggs::SpawnAntEvent;
 use crate::game::hunger::Hunger;
@@ -99,7 +99,8 @@ pub fn spawn_ants(
             .label("FindNewFood")
             .step(LeaveMapAction)
             .step(OutsideMapDiscoveringNewFoodAction::default())
-            .step(MoveToQueenAction);
+            .step(MoveToQueenAction)
+            .step(OfferNewFoodToQueenAction);
 
         let thinker = match ant_type {
             AntType::Scout => Thinker::build()

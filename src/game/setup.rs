@@ -19,8 +19,11 @@ use bevy::utils::HashMap;
 use bevy_prototype_debug_lines::DebugLines;
 use pathfinding::num_traits::Signed;
 
+// pub fn queen_start() -> SideIPos {
+//     SideIPos::new(0, -20)
+// }
 pub fn queen_start() -> SideIPos {
-    SideIPos::new(0, -20)
+    SideIPos::new(0, -2)
 }
 
 /// We want the transform position specified to be on the top left of the rendered sprite.

@@ -16,23 +16,32 @@ impl CarryFoodEvent {
     }
 }
 
+/// Note: attached as child of the ant.
+#[derive(Component, Deref, Debug)]
+pub struct CarryingFood(FoodType);
+
 pub fn attach_food_to_ant(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut events: EventReader<CarryFoodEvent>,
 ) {
-    // TODO: Drop the food if the ant already has some.
     for event in events.iter() {
+        // TODO: Drop the food if the ant already has some.
+
         // Add to the child of the ant.
-        commands.entity(event.entity).with_children(|parent| {
-            parent.spawn(SpriteBundle {
+        let child_entity = commands
+            .spawn(SpriteBundle {
                 texture: asset_server.load("food/food.png"),
                 ..Default::default()
-            });
-        });
+            })
+            .insert(CarryingFood(event.food))
+            .id();
+
+        commands.entity(event.entity).push_children(&[child_entity]);
     }
 }
 
+#[derive(Clone, Copy, Debug)]
 pub enum FoodType {
     Water,
     Apple,

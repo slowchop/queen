@@ -117,6 +117,7 @@ impl Plugin for GamePlugin {
                 brains::leave_map_action,
                 brains::outside_map_discovering_food_action,
                 brains::move_to_queen_action,
+                brains::offer_new_food_to_queen_action,
             )
                 .in_set(BigBrainSet::Actions),
         );
