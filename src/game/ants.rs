@@ -1,9 +1,11 @@
 use crate::game::animation::{AnimationIndices, AnimationTimer};
+use crate::game::brains::pathfinding::{
+    PathfindingAction, SetPathToQueenAction, SetPathToRandomOutsideAction,
+};
 use crate::game::brains::{
-    discover_food_and_offer_to_the_queen, eat_food, gather_food_from_outside, EatAction,
-    HungryScorer, MapTransitionAction, MoveToFoodAction, OfferFoodDiscoveryToQueenAction,
-    OutsideMapDiscoveringNewFoodAction, PathfindingAction, SetPathToQueenAction,
-    SetPathToRandomOutsideAction,
+    discover_food_and_offer_to_the_queen_steps, eat_food, feed_queen_action, feed_queen_steps,
+    gather_food_from_outside_steps, EatAction, HungryScorer, MapTransitionAction,
+    OfferFoodDiscoveryToQueenAction, OutsideMapDiscoveringNewFoodAction,
 };
 use crate::game::eggs::SpawnAntEvent;
 use crate::game::food::AssignedFoodId;
@@ -97,13 +99,19 @@ pub fn spawn_ants(
                 .label("ScoutThinker")
                 .picker(FirstToScore { threshold: 0.5 })
                 .when(HungryScorer, eat_food())
-                .otherwise(discover_food_and_offer_to_the_queen()),
+                .otherwise(discover_food_and_offer_to_the_queen_steps()),
 
             AntType::Cargo => Thinker::build()
                 .label("CargoThinker")
                 .picker(FirstToScore { threshold: 0.5 })
                 .when(HungryScorer, eat_food())
-                .otherwise(gather_food_from_outside()),
+                .otherwise(gather_food_from_outside_steps()),
+
+            AntType::Nurse => Thinker::build()
+                .label("NurseThinker")
+                .picker(FirstToScore { threshold: 0.5 })
+                .when(HungryScorer, eat_food())
+                .otherwise(feed_queen_steps()),
 
             _ => todo!(),
         };

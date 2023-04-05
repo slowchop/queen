@@ -4,8 +4,7 @@ use crate::game::eggs::Egg;
 use crate::game::food::{CarryingFood, FoodId, FoodType};
 use crate::game::hunger::Hunger;
 use crate::game::map::{
-    CellContent, ExitPositions, FoodCell, SideMapPosToEntities, UpdateFoodRenderingEvent,
-    SIDE_CELL_SIZE,
+    CellContent, ExitPositions, SideMapPosToEntities, UpdateFoodRenderingEvent, SIDE_CELL_SIZE,
 };
 use crate::game::pathfinding::{Path, SideMapGraph};
 use crate::game::plugin::{Crawler, PlayerState, Speed, ANT_Z, DIRT_Z, QUEEN_Z};
@@ -123,15 +122,7 @@ pub fn setup_map(
                 // entity.insert(sprite_bundle);
             }
 
-            let mut food_cell = FoodCell::default();
-            food_cell.add(&CarryingFood {
-                food_id: FoodId(FoodType::MedicinePill),
-                amount: 1,
-            });
-
-            let entity_id = entity
-                .insert((cell_content, side_pos, FoodCell::default()))
-                .id();
+            let entity_id = entity.insert((cell_content, side_pos)).id();
 
             // if random::<u8>() == 0 {
             update_food_rendering_writer.send(UpdateFoodRenderingEvent(entity_id));

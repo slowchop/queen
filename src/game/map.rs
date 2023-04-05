@@ -142,21 +142,6 @@ impl CellContent {
     }
 }
 
-/// A container for all the food stored in this cell.
-#[derive(Component, Deref, DerefMut, Default)]
-pub struct FoodCell(HashMap<FoodId, u32>);
-
-impl FoodCell {
-    /// If the food exists we add to the number.
-    pub fn add(&mut self, food: &CarryingFood) {
-        if let Some(current_amount) = self.0.get_mut(&food.food_id) {
-            *current_amount += food.amount;
-        } else {
-            self.0.insert(food.food_id, food.amount);
-        }
-    }
-}
-
 pub fn passive_dig_when_visiting_a_cell(
     side_map_pos_to_entities: Res<SideMapPosToEntities>,
     mut query: Query<&mut CellContent>,
@@ -272,23 +257,29 @@ pub struct ChildCellForFood;
 pub fn update_food_tile_rendering(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    query: Query<(Entity, &FoodCell, Option<&Children>), Changed<FoodCell>>,
+    query: Query<(Entity, &Transform, Option<&Children>)>,
     child_food_cells: Query<&ChildCellForFood>,
+    mut update_food_rendering_reader: EventReader<UpdateFoodRenderingEvent>,
 ) {
-    for (entity, food_cell, maybe_children) in query.iter() {
-        // Remove the child cells because we're going to re-add them.
-        if let Some(child_food_cell) = maybe_children {
-            for child in child_food_cell.iter() {
-                if let Ok(_) = child_food_cells.get(*child) {
-                    commands.entity(*child).despawn_recursive();
-                }
-            }
-        }
+    for UpdateFoodRenderingEvent(entity) in update_food_rendering_reader.iter() {
+        let Ok((entity, transform, maybe_children)) = query.get(*entity) else {
+            error!(?entity, "Could not find entity in query");
+            continue;
+        };
 
-        if food_cell.is_empty() {
-            println!("empty");
-            // continue;
-        }
+        // // Remove the child cells because we're going to re-add them.
+        // if let Some(child_food_cell) = maybe_children {
+        //     for child in child_food_cell.iter() {
+        //         if let Ok(_) = child_food_cells.get(*child) {
+        //             commands.entity(*child).despawn_recursive();
+        //         }
+        //     }
+        // }
+
+        // if food_cell.is_empty() {
+        //     println!("empty");
+        //     // continue;
+        // }
 
         println!("Adding child food cell");
         // TODO: This is executing but the food isn't visible for some reason.

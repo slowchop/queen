@@ -7,12 +7,14 @@ use crate::game::positions::SideIPos;
 use crate::game::queen::{EggLaidEvent, Queen};
 use crate::game::setup::queen_start;
 use crate::game::time::GameTime;
-use crate::game::zones::FoodStorageZone;
+use crate::game::zones::FoodStorageZones;
 use crate::game::{actions, brains, camera, food, mouse, setup, time, ui};
 use bevy::app::{App, Plugin};
 use bevy::prelude::*;
-use bevy::utils::HashMap;
+use bevy::utils::{HashMap, HashSet};
 use big_brain::prelude::*;
+use rand::prelude::{IteratorRandom, ThreadRng};
+use rand::Rng;
 
 pub const DIRT_Z: f32 = 0f32;
 pub const QUEEN_Z: f32 = 1f32;
@@ -117,14 +119,14 @@ impl Plugin for GamePlugin {
         // Brain things
         app.add_systems(
             (
-                brains::pathfinding_action,
-                brains::set_path_to_outside_action,
-                brains::set_path_and_assign_food_to_discovered_food_action,
-                brains::set_path_to_store_food_action,
+                brains::pathfinding::pathfinding_action,
+                brains::pathfinding::set_path_to_outside_action,
+                brains::pathfinding::set_path_and_assign_food_to_discovered_food_action,
+                brains::pathfinding::set_path_to_store_food_action,
                 brains::map_transition_action,
                 brains::outside_map_discovering_food_action,
                 brains::outside_map_gathering_existing_food_action,
-                brains::set_path_to_queen_action,
+                brains::pathfinding::set_path_to_queen_action,
                 brains::offer_food_discovery_to_queen_action,
                 brains::place_food_if_possible_action,
             )
@@ -146,22 +148,6 @@ impl Plugin for GamePlugin {
 pub struct PlayerState {
     pub action_mode: ActionMode,
     pub queen_laying_ant_type: AntType,
-    pub food_storage: FoodStorageZone,
-}
-
-impl PlayerState {
-    /// This won't fail. It will always pick some spot.
-    ///
-    /// First try a random zone. If not, somewhere near the queen.
-    pub fn find_destination_to_place_food(&self) -> SideIPos {
-        if let Some(position) = self.food_storage.random() {
-            return position;
-        };
-
-        // TODO: More random?
-        // TODO: Make sure it's not on top of the queen.
-        queen_start()
-    }
 }
 
 #[derive(PartialEq, Debug, Default)]

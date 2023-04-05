@@ -4,11 +4,11 @@ use bevy::utils::HashSet;
 use rand::Rng;
 
 #[derive(Default, Debug)]
-pub struct Zone {
+pub struct Zones {
     cells: HashSet<SideIPos>,
 }
 
-impl Zone {
+impl Zones {
     pub fn random(&self) -> Option<SideIPos> {
         if self.cells.is_empty() {
             return None;
@@ -21,4 +21,4 @@ impl Zone {
 }
 
 #[derive(Default, Debug, Deref, DerefMut)]
-pub struct FoodStorageZone(Zone);
+pub struct FoodStorageZones(Zones);

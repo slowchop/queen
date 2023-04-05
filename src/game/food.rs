@@ -1,6 +1,9 @@
 use crate::game::positions::SideIPos;
+use crate::game::setup::queen_start;
+use crate::game::zones::FoodStorageZones;
 use bevy::prelude::*;
-use bevy::utils::HashSet;
+use bevy::utils::{HashMap, HashSet};
+use rand::prelude::IteratorRandom;
 use rand::Rng;
 use std::time::Duration;
 
@@ -111,9 +114,34 @@ pub struct FoodState {
     pub approved: Vec<DiscoveredFood>,
     pub rejected: HashSet<FoodId>,
     pub next_discover_time: NextDiscoverTime,
+    pub food_zones: FoodStorageZones,
+    pub food_positions: HashMap<SideIPos, FoodCell>,
 }
 
 impl FoodState {
+    /// This won't fail. It will always pick some spot.
+    ///
+    /// First try a random zone. If not, somewhere near the queen.
+    pub fn find_destination_to_place_food(&self) -> SideIPos {
+        if let Some(position) = self.food_zones.random() {
+            return position;
+        };
+
+        // TODO: More random?
+        // TODO: Make sure it's not on top of the queen.
+        queen_start()
+    }
+
+    pub fn find_destination_to_take_food(&self) -> Option<SideIPos> {
+        if self.food_positions.is_empty() {
+            return None;
+        }
+
+        let mut rng = rand::thread_rng();
+        let index = rng.gen_range(0..self.food_positions.len());
+        self.food_positions.keys().nth(index).copied()
+    }
+
     pub fn approve_food(&mut self, found: DiscoveredFood) {
         self.approved.push(found);
     }
@@ -157,11 +185,64 @@ impl FoodState {
         })
     }
 
+    pub fn add_food_at_position(&mut self, position: SideIPos, food: &CarryingFood) {
+        let food_cell = self.food_positions.entry(position).or_default();
+        food_cell.add(food);
+    }
+
+    pub fn take_food_from_position(&mut self, position: SideIPos) -> Option<CarryingFood> {
+        let food_cell = self.food_positions.get_mut(&position)?;
+        if food_cell.is_empty() {
+            return None;
+        }
+
+        food_cell.take_any_food_up_to_max_amount(DEFAULT_CARGO_CAPACITY)
+    }
+
     pub fn eta(&self, food_id: &FoodId) -> Option<Duration> {
         self.approved
             .iter()
             .find(|f| f.food_id == *food_id)
             .map(|f| f.time_to_discover)
+    }
+}
+
+/// A container for all the food stored in a cell.
+#[derive(Deref, DerefMut, Default)]
+pub struct FoodCell(HashMap<FoodId, u32>);
+
+impl FoodCell {
+    /// If the food exists we add to the number.
+    pub fn add(&mut self, food: &CarryingFood) {
+        if let Some(current_amount) = self.0.get_mut(&food.food_id) {
+            *current_amount += food.amount;
+        } else {
+            self.0.insert(food.food_id, food.amount);
+        }
+    }
+
+    /// We can only carry one type of food at once.
+    ///
+    /// Find the first food and get as much as possible up to the amount specified.
+    ///
+    /// If there is nothing left in the hash entry, remove it.
+    pub fn take_any_food_up_to_max_amount(&mut self, amount: u32) -> Option<CarryingFood> {
+        let food_id = *self.0.keys().next()?;
+        let current_amount = self.0.get_mut(&food_id)?;
+
+        let amount_to_take = amount.min(*current_amount);
+        debug_assert!(amount_to_take > 0);
+
+        *current_amount -= amount_to_take;
+
+        if *current_amount == 0 {
+            self.0.remove(&food_id);
+        }
+
+        Some(CarryingFood {
+            food_id,
+            amount: amount_to_take,
+        })
     }
 }
 
