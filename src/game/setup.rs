@@ -1,7 +1,8 @@
 use crate::game::animation::{AnimationIndices, AnimationTimer};
 use crate::game::camera::CameraFocus;
 use crate::game::eggs::Egg;
-use crate::game::food::{CarryingFood, FoodId, FoodState, FoodType};
+use crate::game::food::{CarryingFood, FoodState};
+use crate::game::food_types::{FoodId, FoodType};
 use crate::game::hunger::Hunger;
 use crate::game::map::{
     AddFoodZoneEvent, CellContent, ExitPositions, SideMapPosToEntities, UpdateFoodRenderingEvent,
@@ -67,7 +68,7 @@ pub fn setup_map(
         food_state.add_food_at_position(
             side_pos,
             &CarryingFood {
-                food_id: FoodId(FoodType::Banana),
+                food_id: FoodId::random(),
                 amount: 5,
             },
         )

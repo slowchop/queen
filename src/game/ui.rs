@@ -91,7 +91,7 @@ pub fn show_queens_choice(mut contexts: EguiContexts, mut player_state: ResMut<P
         .anchor(Align2::CENTER_CENTER, egui::Vec2::ZERO)
         .show(&contexts.ctx_mut(), |ui| {
             ui.heading("This scout has found new food!");
-            ui.label(format!("Food Type: {:?}", *food_info));
+            ui.label(format!("Food Type: {}", food_info));
             ui.heading("This is fake info for now (:");
             ui.label(" + The Queen grows eggs 2x faster.");
             ui.label(" - The Queen needs 3x as much food.");

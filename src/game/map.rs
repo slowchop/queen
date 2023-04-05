@@ -1,4 +1,5 @@
-use crate::game::food::{CarryingFood, FoodId, FoodState};
+use crate::game::food::{CarryingFood, FoodState};
+use crate::game::food_types::FoodId;
 use crate::game::pathfinding::{SideMapGraph, VisitedNodeEvent};
 use crate::game::plugin::{PlayerState, FOOD_Z};
 use crate::game::positions::SideIPos;

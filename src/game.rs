@@ -5,6 +5,7 @@ mod brains;
 mod camera;
 mod eggs;
 mod food;
+mod food_types;
 mod hunger;
 mod map;
 mod mouse;

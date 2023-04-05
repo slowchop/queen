@@ -9,8 +9,9 @@ use crate::game::ants::AntType;
 use crate::game::brains::pathfinding::SetPathToStoredFoodAction;
 use crate::game::food::{
     AddFoodForAntToCarryEvent, AssignedFoodId, CarryingDiscoveredFood, CarryingFood,
-    DiscoveredFood, FoodId, FoodState, FoodType,
+    DiscoveredFood, FoodState,
 };
+use crate::game::food_types::{FoodId, FoodType};
 use crate::game::hunger::Hunger;
 use crate::game::map::{ExitPositions, SideMapPosToEntities, UpdateFoodRenderingEvent};
 use crate::game::pathfinding::Path;
@@ -221,11 +222,13 @@ pub fn outside_map_discovering_food_action(
                     continue;
                 }
 
+                let food_id = food_state.discover_food();
+
                 // Give the ant some food to carry.
                 carry_food_writer.send(AddFoodForAntToCarryEvent::discovered(
                     entity,
                     DiscoveredFood {
-                        food_id: FoodId(FoodType::MedicinePill),
+                        food_id,
                         position: SideIPos::from(transform),
                         time_to_discover: action.initial_time,
                         stash_remaining: 1000,

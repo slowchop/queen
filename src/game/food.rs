@@ -1,3 +1,4 @@
+use crate::game::food_types::FoodId;
 use crate::game::positions::SideIPos;
 use crate::game::setup::queen_start;
 use crate::game::zones::FoodStorageZones;
@@ -86,26 +87,6 @@ pub fn attach_food_to_ant(
     }
 }
 
-/// TODO: (Flavour, Colour, Type), e.g. (Spicy Red Apple)
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Deref)]
-pub struct FoodId(pub FoodType);
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum FoodType {
-    Water,
-    Apple,
-    Banana,
-    Carrot,
-    Fly,
-    Worm,
-    Coffee,
-    Manure,
-    MedicinePill,
-    Honey,
-    Sugar,
-    FrogsLeg,
-}
-
 #[derive(Copy, Clone, Debug)]
 pub struct DiscoveredFood {
     pub food_id: FoodId,
@@ -145,6 +126,25 @@ impl FoodState {
         let mut rng = rand::thread_rng();
         let index = rng.gen_range(0..self.food_position_cells.len());
         self.food_position_cells.keys().nth(index).copied()
+    }
+
+    pub fn discover_food(&mut self) -> FoodId {
+        // The loop here is to stop infinite loops if we reject all food.
+        for _ in 0..100_000 {
+            let food_id = FoodId::random();
+            if self.rejected.contains(&food_id) {
+                continue;
+            }
+
+            // We don't want approved either.
+            if self.approved.iter().any(|f| f.food_id == food_id) {
+                continue;
+            }
+
+            return food_id;
+        }
+
+        return FoodId::random();
     }
 
     pub fn approve_food(&mut self, found: DiscoveredFood) {

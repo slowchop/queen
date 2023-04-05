@@ -1,7 +1,7 @@
 use crate::game;
 use crate::game::ants::AntType;
 use crate::game::eggs::SpawnAntEvent;
-use crate::game::food::FoodId;
+use crate::game::food_types::FoodId;
 use crate::game::map::{AddFoodZoneEvent, UpdateFoodRenderingEvent, UpdateTileDirtAmountEvent};
 use crate::game::pathfinding::VisitedNodeEvent;
 use crate::game::positions::SideIPos;
