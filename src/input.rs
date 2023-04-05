@@ -65,6 +65,8 @@ pub enum InputAction {
     Speed1,
     Speed2,
     Speed3,
+    Debug1,
+    Debug2,
 }
 
 pub fn setup(mut commands: Commands) {
@@ -87,6 +89,9 @@ pub fn setup(mut commands: Commands) {
     keyboard_input_map.insert(KeyCode::Key1, InputAction::Speed1);
     keyboard_input_map.insert(KeyCode::Key2, InputAction::Speed2);
     keyboard_input_map.insert(KeyCode::Key3, InputAction::Speed3);
+
+    keyboard_input_map.insert(KeyCode::F1, InputAction::Debug1);
+    keyboard_input_map.insert(KeyCode::F2, InputAction::Debug2);
 
     mouse_button_input_map.insert(MouseButton::Left, InputAction::PrimaryAction);
     mouse_button_input_map.insert(MouseButton::Right, InputAction::SecondaryAction);

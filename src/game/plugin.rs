@@ -3,7 +3,7 @@ use crate::game::ants::AntType;
 use crate::game::eggs::SpawnAntEvent;
 use crate::game::food_types::FoodId;
 use crate::game::map::{AddFoodZoneEvent, UpdateFoodRenderingEvent, UpdateTileDirtAmountEvent};
-use crate::game::pathfinding::VisitedNodeEvent;
+use crate::game::pathfinding::{PathfindingLinesDebug, VisitedNodeEvent};
 use crate::game::positions::SideIPos;
 use crate::game::queen::{EggLaidEvent, Queen};
 use crate::game::setup::queen_start;
@@ -66,6 +66,7 @@ impl Plugin for GamePlugin {
         app.insert_resource(ui::IsHoveringOverUi::default());
         app.insert_resource(PlayerState::default());
         app.insert_resource(food::FoodState::default());
+        app.insert_resource(PathfindingLinesDebug::default());
 
         app.add_startup_systems((
             camera::setup,
@@ -84,7 +85,12 @@ impl Plugin for GamePlugin {
 
         // ProcessInput
         app.add_systems(
-            (camera::control, actions::primary_mouse_click, time::input)
+            (
+                camera::control,
+                actions::primary_mouse_click,
+                time::input,
+                game::pathfinding::toggle_pathfinding_debug_lines,
+            )
                 .in_set(InputSet::ProcessInput),
         );
 
@@ -113,6 +119,9 @@ impl Plugin for GamePlugin {
                 .in_set(InputSet::Game),
         );
 
+        // Don't know why I can't add this to the InputSet::Game set above.
+        app.add_system(game::pathfinding::show_debug_lines);
+
         app.configure_set(InputSet::Reset.before(InputSet::Ui));
         app.configure_set(InputSet::Ui.before(InputSet::GetInput));
         app.configure_set(InputSet::GetInput.before(InputSet::ProcessInput));
@@ -127,10 +136,10 @@ impl Plugin for GamePlugin {
                 brains::pathfinding::set_path_and_assign_food_to_discovered_food_action,
                 brains::pathfinding::set_path_to_food_storage_action,
                 brains::pathfinding::set_path_to_stored_food_action,
+                brains::pathfinding::set_path_to_queen_action,
                 brains::map_transition_action,
                 brains::outside_map_discovering_food_action,
                 brains::outside_map_gathering_existing_food_action,
-                brains::pathfinding::set_path_to_queen_action,
                 brains::offer_food_discovery_to_queen_action,
                 brains::place_food_if_possible_action,
                 brains::pick_up_food_action,

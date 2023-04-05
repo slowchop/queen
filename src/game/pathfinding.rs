@@ -2,10 +2,61 @@ use crate::game::map::SIDE_CELL_SIZE;
 use crate::game::plugin::Speed;
 use crate::game::positions::SideIPos;
 use crate::game::time::GameTime;
+use crate::input::{InputAction, InputStates};
 use bevy::prelude::*;
 use bevy::utils::petgraph::algo::astar;
 use bevy::utils::petgraph::prelude::{EdgeRef, UnGraphMap};
+use bevy::utils::petgraph::visit::IntoEdgeReferences;
 use bevy_prototype_debug_lines::DebugLines;
+
+#[derive(Debug, Resource, Default)]
+pub struct PathfindingLinesDebug(pub bool);
+
+// pub fn toggle_world_inspector(
+//     input_states: Res<InputStates>,
+//     mut world_inspector_active: ResMut<WorldInspectorActive>,
+// ) {
+//     if input_states.just_pressed(InputAction::Debug1) {
+//         info!("Toggling world inspector");
+//         world_inspector_active.0 = !world_inspector_active.0;
+//     }
+// }
+//
+// pub fn world_inspector_is_active(world_inspector_active: Res<WorldInspectorActive>) -> bool {
+//     world_inspector_active.0
+// }
+
+pub fn toggle_pathfinding_debug_lines(
+    input_states: Res<InputStates>,
+    mut debug: ResMut<PathfindingLinesDebug>,
+) {
+    if input_states.just_pressed(InputAction::Debug2) {
+        debug.0 = !debug.0;
+    }
+}
+
+pub fn show_debug_lines(
+    mut debug_lines: ResMut<DebugLines>,
+    debug: Res<PathfindingLinesDebug>,
+    mut graph: ResMut<SideMapGraph>,
+) {
+    if !debug.0 {
+        return;
+    }
+
+    for edge in graph.edge_references() {
+        let weight = edge.weight();
+        let a = edge.source().to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
+        let b = edge.target().to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
+
+        debug_lines.line_colored(
+            a.extend(10f32),
+            b.extend(10f32),
+            0.0,
+            Color::rgb(*weight as f32 / 255f32, 1f32 - *weight as f32 / 255f32, 0.0),
+        );
+    }
+}
 
 #[derive(Debug)]
 pub struct VisitedNodeEvent {

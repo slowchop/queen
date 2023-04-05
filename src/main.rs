@@ -1,3 +1,4 @@
+use crate::debug::{world_inspector_is_active, WorldInspectorActive};
 use crate::helpers::delete_entities_with_component;
 use crate::settings::GameSettings;
 use crate::state::{GameState, StateConfig};
@@ -14,6 +15,7 @@ use color_eyre::Result;
 use std::time::Duration;
 
 pub mod controller;
+pub mod debug;
 pub mod game;
 pub mod helpers;
 pub mod input;
@@ -37,12 +39,14 @@ fn main() -> Result<()> {
         show_stats: true,
     };
 
+    app.insert_resource(WorldInspectorActive::default());
+
     // Bevy plugins
     app.add_plugins(bevy_plugins(&game_settings));
 
     // Third party plugins
     app.add_plugin(EguiPlugin);
-    app.add_plugin(WorldInspectorPlugin::new());
+    app.add_plugin(WorldInspectorPlugin::new().run_if(world_inspector_is_active));
     app.add_plugin(DebugLinesPlugin::default());
 
     // Game plugins
@@ -96,6 +100,8 @@ fn main() -> Result<()> {
 
     // Video frame rate systems
     app.add_systems((ui::stats::update_stats,));
+
+    app.add_system(debug::toggle_world_inspector.in_set(game::InputSet::ProcessInput));
 
     app.run();
 
