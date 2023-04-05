@@ -8,6 +8,7 @@ authors = ["gak"]
 [dependencies]
 bevy = { version = "0.10.0", features = ["serialize"] }
 bevy_prototype_debug_lines = { version = "0.10.1", features = ["shapes"] }
+bevy-inspector-egui = "0.18.1"
 bevy_egui = "0.20.1"
 color-eyre = "0.6.2"
 serde_yaml = "0.9.19"

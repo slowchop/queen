@@ -117,12 +117,13 @@ pub fn place_food_if_possible_action(
             food_info = Some((child, f.clone()));
         }
         let Some((child_food_entity, carrying_food)) = food_info else {
-            error!(?entity, "No CarryingFood found in children.");
+            error!(?entity, "/////////// No CarryingFood found in children.");
             continue;
         };
 
+        info!("//////// Removing food from cargo ant");
         // Remove food from ant.
-        commands.entity(child_food_entity).despawn();
+        commands.entity(child_food_entity).despawn_recursive();
 
         // Spawn food on ground.
         // 1) Get the cell position
@@ -131,6 +132,8 @@ pub fn place_food_if_possible_action(
         // 4) The sprites for the food will update elsewhere when changed.
         let pos = SideIPos::from(transform);
         food_state.add_food_at_position(pos, &carrying_food);
+
+        panic!("The entity here should be the entity of the tile we're on.");
         update_food_rendering_writer.send(UpdateFoodRenderingEvent(entity));
 
         *state = ActionState::Success;
@@ -342,7 +345,7 @@ pub fn offer_food_discovery_to_queen_action(
             };
             food_info = Some((child, f.clone()));
         }
-        let Some((food_entity, food_info)) = food_info else {
+        let Some((child_food_entity, food_info)) = food_info else {
             error!(?entity, "No food found in child ants.");
             continue;
         };
@@ -383,7 +386,7 @@ pub fn offer_food_discovery_to_queen_action(
                 }
 
                 if done {
-                    commands.entity(food_entity).despawn_recursive();
+                    commands.entity(child_food_entity).despawn_recursive();
                     time.system_pause(false);
                     *state = ActionState::Success;
                 }
@@ -424,8 +427,6 @@ pub fn pick_up_food_action(
         carry_food_writer.send(AddFoodForAntToCarryEvent::food(entity, carrying_food));
     }
 }
-
-// FeedQueenAction
 
 #[derive(Clone, Component, Debug, ActionBuilder)]
 pub struct FeedQueenAction;

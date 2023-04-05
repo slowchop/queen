@@ -8,6 +8,7 @@ use bevy::prelude::*;
 use bevy::window::{WindowLevel, WindowMode, WindowResolution};
 use bevy::DefaultPlugins;
 use bevy_egui::EguiPlugin;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_prototype_debug_lines::DebugLinesPlugin;
 use color_eyre::Result;
 use std::time::Duration;
@@ -41,6 +42,7 @@ fn main() -> Result<()> {
 
     // Third party plugins
     app.add_plugin(EguiPlugin);
+    app.add_plugin(WorldInspectorPlugin::new());
     app.add_plugin(DebugLinesPlugin::default());
 
     // Game plugins

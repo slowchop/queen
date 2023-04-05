@@ -4,7 +4,7 @@ use crate::game::zones::FoodStorageZones;
 use bevy::prelude::*;
 use bevy::utils::{HashMap, HashSet};
 use rand::prelude::IteratorRandom;
-use rand::Rng;
+use rand::{random, Rng};
 use std::time::Duration;
 
 pub const DEFAULT_CARGO_CAPACITY: u32 = 10;
@@ -66,6 +66,11 @@ pub fn attach_food_to_ant(
         // Add to the child of the ant.
         let mut child_entity = commands.spawn(SpriteBundle {
             texture: asset_server.load("food/food.png"),
+            transform: Transform::from_translation(Vec3::new(
+                random::<f32>(),
+                random::<f32>(),
+                0.0,
+            )),
             ..Default::default()
         });
 

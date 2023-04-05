@@ -17,6 +17,7 @@ use crate::game::positions::SideIPos;
 use crate::game::queen::EggLaidEvent;
 use crate::game::setup::{sprite, texture_atlas_sprite};
 use bevy::prelude::*;
+use bevy::render::render_graph::NodeLabel::Name;
 use big_brain::prelude::*;
 
 #[derive(Component, Debug, Eq, PartialEq, Default, Copy, Clone)]
@@ -116,7 +117,10 @@ pub fn spawn_ants(
             _ => todo!(),
         };
 
+        let name: bevy::core::Name = format!("Ant{:?}", ant_type).into();
+
         commands.spawn((
+            name,
             sprite_sheet_bundle,
             animation_indices,
             AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
