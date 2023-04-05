@@ -1,12 +1,13 @@
 use crate::game::animation::{AnimationIndices, AnimationTimer};
 use crate::game::brains::{
-    EatAction, HungryScorer, MapTransitionAction, MoveToFoodAction,
-    OfferFoodDiscoveryToQueenAction, OutsideMapDiscoveringNewFoodAction, PathfindingAction,
-    SetPathToOutsideAction, SetPathToQueenAction,
+    discover_food_and_offer_to_the_queen, eat_food, gather_food_from_outside, EatAction,
+    HungryScorer, MapTransitionAction, MoveToFoodAction, OfferFoodDiscoveryToQueenAction,
+    OutsideMapDiscoveringNewFoodAction, PathfindingAction, SetPathToQueenAction,
+    SetPathToRandomOutsideAction,
 };
 use crate::game::eggs::SpawnAntEvent;
+use crate::game::food::AssignedFoodId;
 use crate::game::hunger::Hunger;
-use crate::game::jobs::Assignment;
 use crate::game::map::SIDE_CELL_SIZE;
 use crate::game::pathfinding::Path;
 use crate::game::plugin::{Crawler, Speed, ANT_Z};
@@ -91,28 +92,18 @@ pub fn spawn_ants(
             ..Default::default()
         };
 
-        let move_and_eat = Steps::build()
-            .label("MoveAndEat")
-            .step(MoveToFoodAction)
-            .step(EatAction);
-
-        let find_new_food = Steps::build()
-            .label("FindNewFood")
-            .step(SetPathToOutsideAction)
-            .step(PathfindingAction)
-            .step(MapTransitionAction::exit())
-            .step(OutsideMapDiscoveringNewFoodAction::default())
-            .step(MapTransitionAction::enter())
-            .step(SetPathToQueenAction)
-            .step(PathfindingAction)
-            .step(OfferFoodDiscoveryToQueenAction);
-
         let thinker = match ant_type {
             AntType::Scout => Thinker::build()
                 .label("ScoutThinker")
                 .picker(FirstToScore { threshold: 0.5 })
-                .when(HungryScorer, move_and_eat)
-                .otherwise(find_new_food),
+                .when(HungryScorer, eat_food())
+                .otherwise(discover_food_and_offer_to_the_queen()),
+
+            AntType::Cargo => Thinker::build()
+                .label("CargoThinker")
+                .picker(FirstToScore { threshold: 0.5 })
+                .when(HungryScorer, eat_food())
+                .otherwise(gather_food_from_outside()),
 
             _ => todo!(),
         };
@@ -126,8 +117,8 @@ pub fn spawn_ants(
             thinker,
             Speed::default(),
             Hunger::default(),
-            Assignment::None,
-            Path::NeedsPath(SideIPos::new(0, -20)),
+            AssignedFoodId::default(),
+            Path::None,
         ));
     }
 }

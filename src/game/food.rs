@@ -4,6 +4,8 @@ use bevy::utils::HashSet;
 use rand::Rng;
 use std::time::Duration;
 
+pub const DEFAULT_CARGO_CAPACITY: u32 = 10;
+
 /// Add food to an ant to carry. If they have some food already we should probably drop it.
 pub struct AddFoodForAntToCarryEvent {
     pub entity: Entity,
@@ -11,15 +13,15 @@ pub struct AddFoodForAntToCarryEvent {
 }
 
 pub enum CarryFoodType {
-    Food(FoodType),
+    Food(CarryingFood),
     DiscoveredFood(DiscoveredFood),
 }
 
 impl AddFoodForAntToCarryEvent {
-    pub fn food(entity: Entity, food: FoodType) -> Self {
+    pub fn food(entity: Entity, carrying_food: CarryingFood) -> Self {
         Self {
             entity,
-            data: CarryFoodType::Food(food),
+            data: CarryFoodType::Food(carrying_food),
         }
     }
 
@@ -31,18 +33,24 @@ impl AddFoodForAntToCarryEvent {
     }
 }
 
+#[derive(Component, Deref, DerefMut, Debug, Default)]
+pub struct AssignedFoodId(pub Option<FoodId>);
+
 /// Specifically for scout ants that have discovered a new food.
 /// Note: Attached to a child of the ant.
 #[derive(Component, Deref, Debug)]
 pub struct CarryingDiscoveredFood(DiscoveredFood);
 
-/// All other cases of carrying food, e.g.:
-/// - carrying food from outside to the food store
-/// - carrying food for the queen to eat
+/// A food and amount.
 ///
-/// Note: Attached to a child of the ant.
-#[derive(Component, Deref, Debug)]
-pub struct CarryingFood(FoodType);
+/// This could mean an ant carrying food, or a cell containing food.
+///
+/// Note: Attached to a child of an ant or cell for the sake of rendering something else.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct CarryingFood {
+    pub food_id: FoodId,
+    pub amount: u32,
+}
 
 pub fn attach_food_to_ant(
     mut commands: Commands,
@@ -58,17 +66,21 @@ pub fn attach_food_to_ant(
             ..Default::default()
         });
 
-        match event.data {
+        match &event.data {
             CarryFoodType::DiscoveredFood(discovered) => {
-                child_entity.insert(CarryingDiscoveredFood(discovered))
+                child_entity.insert(CarryingDiscoveredFood(discovered.clone()))
             }
-            CarryFoodType::Food(food) => child_entity.insert(CarryingFood(food)),
+            CarryFoodType::Food(food) => child_entity.insert(food.clone()),
         };
         let child_entity = child_entity.id();
 
         commands.entity(event.entity).push_children(&[child_entity]);
     }
 }
+
+/// TODO: (Flavour, Colour, Type), e.g. (Spicy Red Apple)
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Deref)]
+pub struct FoodId(pub FoodType);
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum FoodType {
@@ -88,16 +100,16 @@ pub enum FoodType {
 
 #[derive(Copy, Clone, Debug)]
 pub struct DiscoveredFood {
-    pub food: FoodType,
+    pub food_id: FoodId,
     pub position: SideIPos,
     pub time_to_discover: Duration,
-    pub remaining: u32,
+    pub stash_remaining: u32,
 }
 
 #[derive(Resource, Default)]
 pub struct FoodState {
     pub approved: Vec<DiscoveredFood>,
-    pub rejected: HashSet<FoodType>,
+    pub rejected: HashSet<FoodId>,
     pub next_discover_time: NextDiscoverTime,
 }
 
@@ -106,8 +118,50 @@ impl FoodState {
         self.approved.push(found);
     }
 
-    pub fn reject_food(&mut self, food: FoodType) {
+    pub fn reject_food(&mut self, food: FoodId) {
         self.rejected.insert(food);
+    }
+
+    pub fn random_food_source(&self) -> Option<FoodId> {
+        if self.approved.is_empty() {
+            return None;
+        }
+
+        let mut rng = rand::thread_rng();
+        let index = rng.gen_range(0..self.approved.len());
+        self.approved.iter().nth(index).map(|f| f.food_id)
+    }
+
+    pub fn position_of_food_source(&self, food_id: FoodId) -> Option<SideIPos> {
+        self.approved
+            .iter()
+            .find(|f| f.food_id == food_id)
+            .map(|f| f.position)
+    }
+
+    /// Return None if food has run out or not found.
+    pub fn take_food_from_discovered_source(&mut self, food_id: &FoodId) -> Option<CarryingFood> {
+        let mut food = self.approved.iter_mut().find(|f| f.food_id == *food_id)?;
+
+        if food.stash_remaining == 0 {
+            return None;
+        }
+
+        /// At most DEFAULT_CARGO_CAPACITY, but no more than is left in the stash.
+        let amount = food.stash_remaining.min(DEFAULT_CARGO_CAPACITY);
+        food.stash_remaining -= amount;
+
+        Some(CarryingFood {
+            food_id: food.food_id,
+            amount,
+        })
+    }
+
+    pub fn eta(&self, food_id: &FoodId) -> Option<Duration> {
+        self.approved
+            .iter()
+            .find(|f| f.food_id == *food_id)
+            .map(|f| f.time_to_discover)
     }
 }
 

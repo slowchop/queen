@@ -2,8 +2,9 @@ use crate::game::animation::{AnimationIndices, AnimationTimer};
 use crate::game::camera::CameraFocus;
 use crate::game::eggs::Egg;
 use crate::game::hunger::Hunger;
-use crate::game::jobs::Assignment;
-use crate::game::map::{CellContent, ExitPositions, SideMapPosToEntities, SIDE_CELL_SIZE};
+use crate::game::map::{
+    CellContent, ExitPositions, FoodCell, SideMapPosToEntities, SIDE_CELL_SIZE,
+};
 use crate::game::pathfinding::{Path, SideMapGraph};
 use crate::game::plugin::{Crawler, PlayerState, Speed, ANT_Z, DIRT_Z, QUEEN_Z};
 use crate::game::positions::SideIPos;
@@ -102,9 +103,9 @@ pub fn setup_map(
                 }
             };
 
-            let side_cell = SideIPos::new(x, y);
+            let side_pos = SideIPos::new(x, y);
             let texture_path = cell_content.texture_path();
-            let transform = side_cell.to_transform(DIRT_Z);
+            let transform = side_pos.to_transform(DIRT_Z);
 
             let mut entity = commands.spawn_empty();
 
@@ -117,12 +118,14 @@ pub fn setup_map(
                 };
                 entity.insert(sprite_bundle);
             }
-            let entity_id = entity.insert((cell_content, side_cell)).id();
+            let entity_id = entity
+                .insert((cell_content, side_pos, FoodCell::default()))
+                .id();
 
-            side_map_pos_to_entities.insert(side_cell, entity_id);
-            side_map_pos_to_cell.insert(side_cell, cell_content);
+            side_map_pos_to_entities.insert(side_pos, entity_id);
+            side_map_pos_to_cell.insert(side_pos, cell_content);
 
-            graph.add_node(side_cell);
+            graph.add_node(side_pos);
         }
     }
 

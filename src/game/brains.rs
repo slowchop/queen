@@ -1,20 +1,56 @@
 use crate::game::ants::AntType;
 use crate::game::food::{
-    AddFoodForAntToCarryEvent, CarryingDiscoveredFood, CarryingFood, DiscoveredFood, FoodState,
-    FoodType,
+    AddFoodForAntToCarryEvent, AssignedFoodId, CarryingDiscoveredFood, CarryingFood,
+    DiscoveredFood, FoodId, FoodState, FoodType,
 };
 use crate::game::hunger::Hunger;
-use crate::game::map::ExitPositions;
+use crate::game::map::{ExitPositions, FoodCell, SideMapPosToEntities};
 use crate::game::pathfinding::Path;
+use crate::game::plugin::PlayerState;
 use crate::game::positions::SideIPos;
 use crate::game::queen::Queen;
 use crate::game::time::GameTime;
 use bevy::prelude::*;
 use bevy_egui::egui::Align2;
 use bevy_egui::{egui, EguiContexts};
+use big_brain::actions::StepsBuilder;
 use big_brain::prelude::*;
 use rand::prelude::SliceRandom;
 use std::time::Duration;
+
+pub fn eat_food() -> StepsBuilder {
+    // TODO: expand this
+    Steps::build()
+        .label("MoveAndEat")
+        .step(MoveToFoodAction)
+        .step(EatAction)
+}
+
+pub fn discover_food_and_offer_to_the_queen() -> StepsBuilder {
+    Steps::build()
+        .label("DiscoverFood")
+        .step(SetPathToRandomOutsideAction)
+        .step(PathfindingAction)
+        .step(MapTransitionAction::exit())
+        .step(OutsideMapDiscoveringNewFoodAction::default())
+        .step(MapTransitionAction::enter())
+        .step(SetPathToQueenAction)
+        .step(PathfindingAction)
+        .step(OfferFoodDiscoveryToQueenAction)
+}
+
+pub fn gather_food_from_outside() -> StepsBuilder {
+    Steps::build()
+        .label("GatherFoodFromOutside")
+        .step(SetPathToDiscoveredFoodAction)
+        .step(PathfindingAction)
+        .step(MapTransitionAction::exit())
+        .step(OutsideMapGatheringExistingFoodAction::default())
+        .step(MapTransitionAction::enter())
+        .step(SetPathToStoreFoodAction)
+        .step(PathfindingAction)
+        .step(PlaceFoodIfPossibleAction)
+}
 
 /// Actor is on a path. This action is to follow the path and finish when the path is finished.
 #[derive(Clone, Component, Debug, ActionBuilder)]
@@ -54,12 +90,12 @@ pub fn pathfinding_action(
 
 /// A scout or cargo ant needs to find a destination to the outside.
 #[derive(Clone, Component, Debug, ActionBuilder)]
-pub struct SetPathToOutsideAction;
+pub struct SetPathToRandomOutsideAction;
 
 pub fn set_path_to_outside_action(
     exit_positions: Res<ExitPositions>,
     mut ants: Query<&mut Path>,
-    mut query: Query<(&Actor, &mut ActionState), With<SetPathToOutsideAction>>,
+    mut query: Query<(&Actor, &mut ActionState), With<SetPathToRandomOutsideAction>>,
 ) {
     for (Actor(actor), mut state) in query.iter_mut() {
         let Ok(mut path) = ants.get_mut(*actor) else {
@@ -78,6 +114,131 @@ pub fn set_path_to_outside_action(
                     .expect("No exit positions");
 
                 path.set_target(*exit_position);
+
+                *state = ActionState::Success;
+            }
+            _ => {}
+        }
+    }
+}
+
+#[derive(Clone, Component, Debug, ActionBuilder)]
+pub struct SetPathToStoreFoodAction;
+
+pub fn set_path_to_store_food_action(
+    player_state: Res<PlayerState>,
+    mut ants: Query<&mut Path>,
+    mut query: Query<(&Actor, &mut ActionState), With<SetPathToStoreFoodAction>>,
+) {
+    for (Actor(actor), mut state) in query.iter_mut() {
+        let Ok(mut path) = ants.get_mut(*actor) else {
+            warn!("No path for actor {:?}", actor);
+            continue;
+        };
+
+        match *state {
+            ActionState::Requested => {
+                let target = player_state.find_destination_to_place_food();
+                path.set_target(target);
+
+                *state = ActionState::Success;
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Will attempt to place food at the destination.
+///
+/// TODO: This will work all the time for now.
+#[derive(Clone, Component, Debug, ActionBuilder)]
+pub struct PlaceFoodIfPossibleAction;
+
+pub fn place_food_if_possible_action(
+    mut commands: Commands,
+    side_map_pos_to_entities: Res<SideMapPosToEntities>,
+    mut food_cells: Query<&mut FoodCell>,
+    mut ants: Query<(Entity, &Children, &Transform)>,
+    carrying_food: Query<&CarryingFood>,
+    mut query: Query<(&Actor, &mut ActionState), With<PlaceFoodIfPossibleAction>>,
+) {
+    for (Actor(actor), mut state) in query.iter_mut() {
+        let Ok((entity, children, transform)) = ants.get_mut(*actor) else {
+            warn!("No children + transform for actor {:?}", actor);
+            continue;
+        };
+
+        if *state != ActionState::Requested {
+            continue;
+        }
+
+        // Grab the food type.
+        let mut food_info = None;
+        for &child in children.iter() {
+            let Ok(f) = carrying_food.get(child) else {
+                continue;
+            };
+            food_info = Some((child, f.clone()));
+        }
+        let Some((child_food_entity, carrying_food)) = food_info else {
+            error!(?entity, "No CarryingFood found in children.");
+            continue;
+        };
+
+        // Remove food from ant.
+        commands.entity(child_food_entity).despawn();
+
+        // Spawn food on ground.
+        // 1) Get the cell entity
+        // 2) Get the FoodCell component.
+        // 3) Update FoodCell
+        // 4) The sprites for the food will update elsewhere when changed.
+        let pos = SideIPos::from(transform);
+        let cell_entity = side_map_pos_to_entities
+            .get(&pos)
+            .expect("No cell entity found for position");
+
+        let Ok(mut food_cell) = food_cells.get_mut(*cell_entity) else {
+            error!(?cell_entity, "No FoodCell found for cell entity.");
+            continue;
+        };
+
+        food_cell.add(&carrying_food);
+
+        *state = ActionState::Success;
+    }
+}
+
+/// A cargo ant needs to find a destination to the outside.
+#[derive(Clone, Component, Debug, ActionBuilder)]
+pub struct SetPathToDiscoveredFoodAction;
+
+pub fn set_path_and_assign_food_to_discovered_food_action(
+    food_state: Res<FoodState>,
+    mut ants: Query<(&mut Path, &mut AssignedFoodId)>,
+    mut query: Query<(&Actor, &mut ActionState), With<SetPathToDiscoveredFoodAction>>,
+) {
+    for (Actor(actor), mut state) in query.iter_mut() {
+        let Ok((mut path, mut assigned_food_id)) = ants.get_mut(*actor) else {
+            error!("No path for actor {:?}", actor);
+            continue;
+        };
+
+        match *state {
+            ActionState::Requested => {
+                let Some(food_id) = food_state.random_food_source() else {
+                    warn!("No random food source found");
+                    *state = ActionState::Failure;
+                    continue;
+                };
+                let Some(exit_position) = food_state.position_of_food_source(food_id) else {
+                    warn!("No position for food {:?}", assigned_food_id);
+                    *state = ActionState::Failure;
+                    continue;
+                };
+
+                **assigned_food_id = Some(food_id);
+                path.set_target(exit_position);
 
                 *state = ActionState::Success;
             }
@@ -151,7 +312,7 @@ pub fn outside_map_discovering_food_action(
 ) {
     for (Actor(actor), mut state, mut action) in query.iter_mut() {
         let Ok((entity, transform)) = ants.get_mut(*actor) else {
-            warn!(?actor, "No transform + visibility found with AntType.");
+            warn!(?actor, "No transform found.");
             continue;
         };
 
@@ -173,12 +334,76 @@ pub fn outside_map_discovering_food_action(
                 carry_food_writer.send(AddFoodForAntToCarryEvent::discovered(
                     entity,
                     DiscoveredFood {
-                        food: FoodType::MedicinePill,
+                        food_id: FoodId(FoodType::MedicinePill),
                         position: SideIPos::from(transform),
                         time_to_discover: action.initial_time,
-                        remaining: 20000,
+                        stash_remaining: 1000,
                     },
                 ));
+
+                *state = ActionState::Success;
+            }
+            _ => {}
+        }
+    }
+}
+
+/// The ant is off the map going to get existing food.
+#[derive(Clone, Component, Debug, ActionBuilder, Default)]
+pub struct OutsideMapGatheringExistingFoodAction {
+    pub time_left: Duration,
+}
+
+pub fn outside_map_gathering_existing_food_action(
+    time: Res<GameTime>,
+    mut food_state: ResMut<FoodState>,
+    mut ants: Query<(Entity, &mut AssignedFoodId)>,
+    mut query: Query<(
+        &Actor,
+        &mut ActionState,
+        &mut OutsideMapGatheringExistingFoodAction,
+    )>,
+    mut carry_food_writer: EventWriter<AddFoodForAntToCarryEvent>,
+) {
+    for (Actor(actor), mut state, mut action) in query.iter_mut() {
+        let Ok((entity, mut assigned_food_id)) = ants.get_mut(*actor) else {
+            warn!(?actor, "No transform found.");
+            continue;
+        };
+
+        let Some(food_id) = **assigned_food_id else {
+            warn!("No food assigned for actor {:?}", actor);
+            continue;
+        };
+
+        match *state {
+            ActionState::Requested => {
+                let Some(time_left) = food_state.eta(&food_id) else {
+                    warn!("No food left at {:?}", food_id);
+                    *state = ActionState::Failure;
+                    continue;
+                };
+                action.time_left = time_left;
+
+                *state = ActionState::Executing;
+            }
+            ActionState::Executing => {
+                action.time_left = action.time_left.saturating_sub(time.delta());
+                if action.time_left != Duration::ZERO {
+                    continue;
+                }
+
+                let Some(carrying_food) = food_state.take_food_from_discovered_source(&food_id) else {
+                    warn!("No food left at {:?}", food_id);
+                    *state = ActionState::Failure;
+                    continue;
+                };
+
+                // Give the ant the food to carry.
+                carry_food_writer.send(AddFoodForAntToCarryEvent::food(entity, carrying_food));
+
+                // Remove the food assignment.
+                **assigned_food_id = None;
 
                 *state = ActionState::Success;
             }
@@ -295,7 +520,7 @@ pub fn offer_food_discovery_to_queen_action(
                                 // TODO: The queen eats the ant even if she is full.
                                 // Food just vanishes.
 
-                                food_state.reject_food(food_info.food);
+                                food_state.reject_food(food_info.food_id);
                                 done = true;
                             }
 

@@ -1,3 +1,4 @@
+use crate::game::food::{CarryingFood, FoodId};
 use crate::game::pathfinding::{SideMapGraph, VisitedNodeEvent};
 use crate::game::positions::SideIPos;
 use bevy::prelude::*;
@@ -135,6 +136,21 @@ impl CellContent {
             Some("cell/full.png".to_string())
         } else {
             Some("cell/half.png".to_string())
+        }
+    }
+}
+
+/// A container for all the food stored in this cell.
+#[derive(Component, Deref, DerefMut, Default)]
+pub struct FoodCell(HashMap<FoodId, u32>);
+
+impl FoodCell {
+    /// If the food exists we add to the number.
+    pub fn add(&mut self, food: &CarryingFood) {
+        if let Some(current_amount) = self.0.get_mut(&food.food_id) {
+            *current_amount += food.amount;
+        } else {
+            self.0.insert(food.food_id, food.amount);
         }
     }
 }

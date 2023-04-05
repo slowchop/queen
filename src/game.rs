@@ -6,7 +6,6 @@ mod camera;
 mod eggs;
 mod food;
 mod hunger;
-mod jobs;
 mod map;
 mod mouse;
 mod pathfinding;
@@ -16,6 +15,7 @@ mod queen;
 mod setup;
 mod time;
 mod ui;
+mod zones;
 
 pub use plugin::GamePlugin;
 pub use plugin::InputSet;
