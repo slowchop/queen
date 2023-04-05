@@ -59,20 +59,22 @@ pub fn setup_map(
     mut update_food_rendering_writer: EventWriter<UpdateFoodRenderingEvent>,
 ) {
     // TODO: Temporary...
-    add_zone_writer.send(AddFoodZoneEvent(SideIPos::new(10, -10)));
+    add_zone_writer.send(AddFoodZoneEvent(SideIPos::new(10, -20)));
+    add_zone_writer.send(AddFoodZoneEvent(SideIPos::new(9, -20)));
+    add_zone_writer.send(AddFoodZoneEvent(SideIPos::new(8, -20)));
 
     // XXX: Temporary...
-    {
-        let side_pos = SideIPos::new(10, -10);
-        update_food_rendering_writer.send(UpdateFoodRenderingEvent(side_pos));
-        food_state.add_food_at_position(
-            side_pos,
-            &CarryingFood {
-                food_id: FoodId::random(),
-                amount: 5,
-            },
-        )
-    }
+    // {
+    //     let side_pos = SideIPos::new(10, -10);
+    //     update_food_rendering_writer.send(UpdateFoodRenderingEvent(side_pos));
+    //     food_state.add_food_at_position(
+    //         side_pos,
+    //         &CarryingFood {
+    //             food_id: FoodId::random(),
+    //             amount: 5,
+    //         },
+    //     )
+    // }
 
     let mut side_map_pos_to_entities = HashMap::with_capacity(1_000);
 

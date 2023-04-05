@@ -162,7 +162,7 @@ pub fn passive_dig_when_visiting_a_cell(
             continue;
         };
 
-        cell_content.dig(50);
+        cell_content.dig(10);
 
         // TODO: "Move" the amount removed the the previous cell (and overflow outwards if that's not possible).
 
@@ -287,7 +287,6 @@ pub fn update_food_tile_rendering(
         }
 
         let Some(food_cell) = food_state.info_at_position(pos) else {
-            todo!("Clear out the children (should be done above)");
             continue;
         };
 
