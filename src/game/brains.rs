@@ -4,7 +4,7 @@ use crate::game::food::{
     DiscoveredFood, FoodId, FoodState, FoodType,
 };
 use crate::game::hunger::Hunger;
-use crate::game::map::{ExitPositions, FoodCell, SideMapPosToEntities};
+use crate::game::map::{ExitPositions, FoodCell, SideMapPosToEntities, UpdateFoodRenderingEvent};
 use crate::game::pathfinding::Path;
 use crate::game::plugin::PlayerState;
 use crate::game::positions::SideIPos;
@@ -161,6 +161,7 @@ pub fn place_food_if_possible_action(
     mut ants: Query<(Entity, &Children, &Transform)>,
     carrying_food: Query<&CarryingFood>,
     mut query: Query<(&Actor, &mut ActionState), With<PlaceFoodIfPossibleAction>>,
+    mut update_food_rendering_writer: EventWriter<UpdateFoodRenderingEvent>,
 ) {
     for (Actor(actor), mut state) in query.iter_mut() {
         let Ok((entity, children, transform)) = ants.get_mut(*actor) else {
@@ -204,6 +205,7 @@ pub fn place_food_if_possible_action(
         };
 
         food_cell.add(&carrying_food);
+        update_food_rendering_writer.send(UpdateFoodRenderingEvent(*cell_entity));
 
         *state = ActionState::Success;
     }

@@ -1,9 +1,11 @@
 use crate::game::animation::{AnimationIndices, AnimationTimer};
 use crate::game::camera::CameraFocus;
 use crate::game::eggs::Egg;
+use crate::game::food::{CarryingFood, FoodId, FoodType};
 use crate::game::hunger::Hunger;
 use crate::game::map::{
-    CellContent, ExitPositions, FoodCell, SideMapPosToEntities, SIDE_CELL_SIZE,
+    CellContent, ExitPositions, FoodCell, SideMapPosToEntities, UpdateFoodRenderingEvent,
+    SIDE_CELL_SIZE,
 };
 use crate::game::pathfinding::{Path, SideMapGraph};
 use crate::game::plugin::{Crawler, PlayerState, Speed, ANT_Z, DIRT_Z, QUEEN_Z};
@@ -19,6 +21,7 @@ use bevy::utils::petgraph::visit::IntoEdgeReferences;
 use bevy::utils::HashMap;
 use bevy_prototype_debug_lines::DebugLines;
 use pathfinding::num_traits::Signed;
+use rand::random;
 
 // pub fn queen_start() -> SideIPos {
 //     SideIPos::new(0, -20)
@@ -45,6 +48,7 @@ pub fn setup_map(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut debug_lines: ResMut<DebugLines>,
+    mut update_food_rendering_writer: EventWriter<UpdateFoodRenderingEvent>,
 ) {
     let mut side_map_pos_to_entities = HashMap::with_capacity(1_000);
 
@@ -110,17 +114,28 @@ pub fn setup_map(
             let mut entity = commands.spawn_empty();
 
             if let Some(texture_path) = texture_path {
-                let sprite_bundle = SpriteBundle {
-                    sprite: sprite(),
-                    transform,
-                    texture: asset_server.load(texture_path),
-                    ..Default::default()
-                };
-                entity.insert(sprite_bundle);
+                // let sprite_bundle = SpriteBundle {
+                //     sprite: sprite(),
+                //     transform,
+                //     texture: asset_server.load(texture_path),
+                //     ..Default::default()
+                // };
+                // entity.insert(sprite_bundle);
             }
+
+            let mut food_cell = FoodCell::default();
+            food_cell.add(&CarryingFood {
+                food_id: FoodId(FoodType::MedicinePill),
+                amount: 1,
+            });
+
             let entity_id = entity
                 .insert((cell_content, side_pos, FoodCell::default()))
                 .id();
+
+            // if random::<u8>() == 0 {
+            update_food_rendering_writer.send(UpdateFoodRenderingEvent(entity_id));
+            // }
 
             side_map_pos_to_entities.insert(side_pos, entity_id);
             side_map_pos_to_cell.insert(side_pos, cell_content);

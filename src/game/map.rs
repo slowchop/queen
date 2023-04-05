@@ -1,10 +1,11 @@
 use crate::game::food::{CarryingFood, FoodId};
 use crate::game::pathfinding::{SideMapGraph, VisitedNodeEvent};
+use crate::game::plugin::FOOD_Z;
 use crate::game::positions::SideIPos;
 use bevy::prelude::*;
 use bevy::utils::petgraph::prelude::EdgeRef;
 use bevy::utils::petgraph::visit::IntoEdgeReferences;
-use bevy::utils::HashMap;
+use bevy::utils::{HashMap, HashSet};
 use bevy_prototype_debug_lines::DebugLines;
 
 pub const SIDE_CELL_SIZE: u8 = 32;
@@ -18,8 +19,9 @@ impl From<Vec<SideIPos>> for ExitPositions {
     }
 }
 
-#[derive(Debug, Deref, DerefMut)]
-pub struct CellChangedEvent(Entity);
+pub struct UpdateTileDirtAmountEvent(pub Entity);
+
+pub struct UpdateFoodRenderingEvent(pub Entity);
 
 /// The side view of the world. The idea is that if we have time we can do a top down view on the
 /// surface of the world.
@@ -159,7 +161,7 @@ pub fn passive_dig_when_visiting_a_cell(
     side_map_pos_to_entities: Res<SideMapPosToEntities>,
     mut query: Query<&mut CellContent>,
     mut visited_node_reader: EventReader<VisitedNodeEvent>,
-    mut cell_changed_writer: EventWriter<CellChangedEvent>,
+    mut update_tile_rendering_writer: EventWriter<UpdateTileDirtAmountEvent>,
 ) {
     for event in visited_node_reader.iter() {
         let Some(entity) = side_map_pos_to_entities.get(&event.position) else {
@@ -176,7 +178,7 @@ pub fn passive_dig_when_visiting_a_cell(
 
         // TODO: "Move" the amount removed the the previous cell (and overflow outwards if that's not possible).
 
-        cell_changed_writer.send(CellChangedEvent(*entity));
+        update_tile_rendering_writer.send(UpdateTileDirtAmountEvent(*entity));
     }
 }
 
@@ -185,20 +187,18 @@ pub fn detect_cell_content_changes_and_update_graph(
     mut graph: ResMut<SideMapGraph>,
     mut side_map_pos_to_entities: ResMut<SideMapPosToEntities>,
     mut query: Query<(&CellContent, &Transform)>,
-    mut cell_changed_reader: EventReader<CellChangedEvent>,
+    mut update_tile_rendering_event: EventReader<UpdateTileDirtAmountEvent>,
 ) {
-    for cell_changed_event in cell_changed_reader.iter() {
-        let entity = **cell_changed_event;
-
+    for UpdateTileDirtAmountEvent(entity) in update_tile_rendering_event.iter() {
         // Grab the CellContent for this entity.
-        let Ok((cell, transform)) = query.get(entity) else {
-            warn!(?cell_changed_event, "Could not find CellContent for entity");
+        let Ok((cell, transform)) = query.get(*entity) else {
+            warn!(?entity, "Could not find CellContent for entity");
             continue;
         };
 
         let pos = SideIPos::from(transform);
         let Some(a_weight) = cell.weight() else {
-            warn!(?cell_changed_event, "Could not find weight for cell content");
+            warn!(?entity, ?pos, "Could not find weight for cell content");
             continue;
         };
 
@@ -242,15 +242,15 @@ pub fn detect_cell_content_changes_and_update_graph(
     // }
 }
 
-pub fn detect_cell_content_changes_and_update_rendering(
+pub fn update_tile_rendering(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    query: Query<(Entity, &SideIPos, &CellContent)>,
-    mut cell_changed_reader: EventReader<CellChangedEvent>,
+    query: Query<(Entity, &CellContent)>,
+    mut update_tile_rendering_reader: EventReader<UpdateTileDirtAmountEvent>,
 ) {
-    for cell_changed_event in cell_changed_reader.iter() {
-        let Ok((entity, side_map_pos, cell_content)) = query.get(**cell_changed_event) else {
-            warn!(?cell_changed_event, "Could not find entity in query");
+    for UpdateTileDirtAmountEvent(entity) in update_tile_rendering_reader.iter() {
+        let Ok((entity, cell_content)) = query.get(*entity) else {
+            error!(?entity, "Could not find entity in query");
             continue;
         };
 
@@ -262,5 +262,46 @@ pub fn detect_cell_content_changes_and_update_rendering(
         } else {
             entity.remove::<Handle<Image>>();
         }
+    }
+}
+
+/// A tag to indicate that this entity is a child of a food cell.
+#[derive(Component)]
+pub struct ChildCellForFood;
+
+pub fn update_food_tile_rendering(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    query: Query<(Entity, &FoodCell, Option<&Children>), Changed<FoodCell>>,
+    child_food_cells: Query<&ChildCellForFood>,
+) {
+    for (entity, food_cell, maybe_children) in query.iter() {
+        // Remove the child cells because we're going to re-add them.
+        if let Some(child_food_cell) = maybe_children {
+            for child in child_food_cell.iter() {
+                if let Ok(_) = child_food_cells.get(*child) {
+                    commands.entity(*child).despawn_recursive();
+                }
+            }
+        }
+
+        if food_cell.is_empty() {
+            println!("empty");
+            // continue;
+        }
+
+        println!("Adding child food cell");
+        // TODO: This is executing but the food isn't visible for some reason.
+        // XXX: ???
+
+        let child = commands
+            .spawn(SpriteBundle {
+                texture: asset_server.load("food/food.png"),
+                ..Default::default()
+            })
+            .insert(ChildCellForFood)
+            .id();
+
+        commands.entity(entity).push_children(&[child]);
     }
 }

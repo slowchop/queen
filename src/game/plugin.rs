@@ -1,7 +1,7 @@
 use crate::game;
 use crate::game::ants::AntType;
 use crate::game::eggs::SpawnAntEvent;
-use crate::game::map::CellChangedEvent;
+use crate::game::map::{UpdateFoodRenderingEvent, UpdateTileDirtAmountEvent};
 use crate::game::pathfinding::VisitedNodeEvent;
 use crate::game::positions::SideIPos;
 use crate::game::queen::{EggLaidEvent, Queen};
@@ -16,6 +16,7 @@ use big_brain::prelude::*;
 
 pub const DIRT_Z: f32 = 0f32;
 pub const QUEEN_Z: f32 = 1f32;
+pub const FOOD_Z: f32 = 1.5f32;
 pub const ANT_Z: f32 = 2f32;
 pub const EGG_Z: f32 = 3f32;
 
@@ -51,10 +52,11 @@ impl Plugin for GamePlugin {
         app.add_plugin(BigBrainPlugin);
 
         app.add_event::<VisitedNodeEvent>();
-        app.add_event::<CellChangedEvent>();
         app.add_event::<EggLaidEvent>();
         app.add_event::<SpawnAntEvent>();
         app.add_event::<food::AddFoodForAntToCarryEvent>();
+        app.add_event::<UpdateTileDirtAmountEvent>();
+        app.add_event::<UpdateFoodRenderingEvent>();
 
         app.insert_resource(GameTime::default());
         app.insert_resource(ui::IsHoveringOverUi::default());
@@ -92,7 +94,8 @@ impl Plugin for GamePlugin {
                 game::pathfinding::needs_path,
                 game::pathfinding::move_along_path,
                 game::map::passive_dig_when_visiting_a_cell,
-                game::map::detect_cell_content_changes_and_update_rendering,
+                game::map::update_tile_rendering,
+                game::map::update_food_tile_rendering,
                 game::map::detect_cell_content_changes_and_update_graph,
                 game::queen::grow_and_lay_eggs,
                 game::eggs::spawn_eggs,
