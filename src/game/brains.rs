@@ -399,7 +399,6 @@ pub fn offer_food_discovery_to_queen_action(
 pub struct PickUpFoodAction;
 
 pub fn pick_up_food_action(
-    mut time: ResMut<GameTime>,
     mut food_state: ResMut<FoodState>,
     mut ants: Query<(Entity, &Transform), With<AntType>>,
     mut query: Query<(&Actor, &mut ActionState), With<PickUpFoodAction>>,
@@ -407,7 +406,7 @@ pub fn pick_up_food_action(
 ) {
     for ((Actor(actor), mut state)) in query.iter_mut() {
         let Ok((entity, transform)) = ants.get_mut(*actor) else {
-            warn!(?actor, "No children found.");
+            warn!(?actor, ">>>>>>>>>>> No children found.");
             *state = ActionState::Failure;
             continue;
         };
@@ -416,11 +415,12 @@ pub fn pick_up_food_action(
 
         // Make sure there's still food here.
         let Some(carrying_food) = food_state.take_food_from_position(pos) else {
-            warn!("No food left at {:?}", pos);
+            warn!(">>>>>>>>> No food left at {:?}", pos);
             *state = ActionState::Failure;
             continue;
         };
 
+        info!(">>>>>>>>>> Picked up food at {:?}", pos);
         carry_food_writer.send(AddFoodForAntToCarryEvent::food(entity, carrying_food));
     }
 }

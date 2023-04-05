@@ -124,13 +124,15 @@ impl Plugin for GamePlugin {
                 brains::pathfinding::pathfinding_action,
                 brains::pathfinding::set_path_to_outside_action,
                 brains::pathfinding::set_path_and_assign_food_to_discovered_food_action,
-                brains::pathfinding::set_path_to_store_food_action,
+                brains::pathfinding::set_path_to_food_storage_action,
+                brains::pathfinding::set_path_to_stored_food_action,
                 brains::map_transition_action,
                 brains::outside_map_discovering_food_action,
                 brains::outside_map_gathering_existing_food_action,
                 brains::pathfinding::set_path_to_queen_action,
                 brains::offer_food_discovery_to_queen_action,
                 brains::place_food_if_possible_action,
+                brains::pick_up_food_action,
             )
                 .in_set(BigBrainSet::Actions),
         );

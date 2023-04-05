@@ -80,7 +80,7 @@ pub fn set_path_to_outside_action(
 #[derive(Clone, Component, Debug, ActionBuilder)]
 pub struct SetPathToFoodStorageAction;
 
-pub fn set_path_to_store_food_action(
+pub fn set_path_to_food_storage_action(
     food_state: Res<FoodState>,
     mut ants: Query<&mut Path>,
     mut query: Query<(&Actor, &mut ActionState), With<SetPathToFoodStorageAction>>,
@@ -191,6 +191,7 @@ pub fn set_path_to_stored_food_action(
             continue;
         };
 
+        info!("------ Taking food from {:?}", target);
         path.set_target(target);
 
         *state = ActionState::Success;

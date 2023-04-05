@@ -1,7 +1,7 @@
 use crate::game::animation::{AnimationIndices, AnimationTimer};
 use crate::game::camera::CameraFocus;
 use crate::game::eggs::Egg;
-use crate::game::food::{CarryingFood, FoodId, FoodType};
+use crate::game::food::{CarryingFood, FoodId, FoodState, FoodType};
 use crate::game::hunger::Hunger;
 use crate::game::map::{
     AddFoodZoneEvent, CellContent, ExitPositions, SideMapPosToEntities, UpdateFoodRenderingEvent,
@@ -49,6 +49,8 @@ pub fn setup_map(
     asset_server: Res<AssetServer>,
     mut debug_lines: ResMut<DebugLines>,
 
+    // TODO: Temporary...
+    mut food_state: ResMut<FoodState>,
     // TODO: Temporary...
     mut add_zone_writer: EventWriter<AddFoodZoneEvent>,
 
@@ -133,9 +135,17 @@ pub fn setup_map(
 
             let entity_id = entity.insert((cell_content, side_pos)).id();
 
-            // if random::<u8>() == 0 {
-            update_food_rendering_writer.send(UpdateFoodRenderingEvent(entity_id));
-            // }
+            // XXX: Temporary...
+            if random::<u8>() == 0 {
+                update_food_rendering_writer.send(UpdateFoodRenderingEvent(entity_id));
+                food_state.add_food_at_position(
+                    side_pos,
+                    &CarryingFood {
+                        food_id: FoodId(FoodType::Banana),
+                        amount: 5,
+                    },
+                )
+            }
 
             side_map_pos_to_entities.insert(side_pos, entity_id);
             side_map_pos_to_cell.insert(side_pos, cell_content);
