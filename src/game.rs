@@ -14,6 +14,7 @@ mod plugin;
 mod positions;
 mod queen;
 mod setup;
+mod side_effects;
 mod time;
 mod ui;
 mod zones;
