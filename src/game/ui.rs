@@ -1,11 +1,11 @@
 use crate::game::ants::AntType;
 use crate::game::hunger::Hunger;
-use crate::game::plugin::{ActionMode, PlayerState};
+use crate::game::plugin::{ActionMode, PlayerState, QueensChoice};
 use crate::game::queen::Queen;
 use bevy::prelude::*;
 use bevy_egui::egui::style::Spacing;
 use bevy_egui::egui::FontFamily::Proportional;
-use bevy_egui::egui::FontId;
+use bevy_egui::egui::{Align2, FontId};
 use bevy_egui::{egui, EguiContext, EguiContexts, EguiInput};
 
 #[derive(Resource, Default)]
@@ -80,4 +80,31 @@ pub fn control(
     if response.response.hovered() {
         *is_hovering_over_ui = IsHoveringOverUi(true);
     }
+}
+
+pub fn show_queens_choice(mut contexts: EguiContexts, mut player_state: ResMut<PlayerState>) {
+    let QueensChoice::Undecided(food_info) =  player_state.queens_choice else {
+        return;
+    };
+
+    egui::Window::new("Queen's Choice")
+        .anchor(Align2::CENTER_CENTER, egui::Vec2::ZERO)
+        .show(&contexts.ctx_mut(), |ui| {
+            ui.heading("This scout has found new food!");
+            ui.label(format!("Food Type: {:?}", *food_info));
+            ui.heading("This is fake info for now (:");
+            ui.label(" + The Queen grows eggs 2x faster.");
+            ui.label(" - The Queen needs 3x as much food.");
+            ui.label(" + New ants walk 3x faster");
+            ui.label(" - Ants eat 2x slower");
+            ui.label("Do you want to add this food to the colony?");
+            ui.horizontal(|ui| {
+                if ui.button("Yes").clicked() {
+                    player_state.queens_choice = QueensChoice::Approve;
+                }
+                if ui.button("No").clicked() {
+                    player_state.queens_choice = QueensChoice::Deny;
+                }
+            });
+        });
 }

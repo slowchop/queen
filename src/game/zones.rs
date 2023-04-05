@@ -9,6 +9,10 @@ pub struct Zones {
 }
 
 impl Zones {
+    pub fn add(&mut self, position: SideIPos) {
+        self.cells.insert(position);
+    }
+
     pub fn random(&self) -> Option<SideIPos> {
         if self.cells.is_empty() {
             return None;

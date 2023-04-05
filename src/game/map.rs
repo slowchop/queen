@@ -1,6 +1,6 @@
-use crate::game::food::{CarryingFood, FoodId};
+use crate::game::food::{CarryingFood, FoodId, FoodState};
 use crate::game::pathfinding::{SideMapGraph, VisitedNodeEvent};
-use crate::game::plugin::FOOD_Z;
+use crate::game::plugin::{PlayerState, FOOD_Z};
 use crate::game::positions::SideIPos;
 use bevy::prelude::*;
 use bevy::utils::petgraph::prelude::EdgeRef;
@@ -22,6 +22,8 @@ impl From<Vec<SideIPos>> for ExitPositions {
 pub struct UpdateTileDirtAmountEvent(pub Entity);
 
 pub struct UpdateFoodRenderingEvent(pub Entity);
+
+pub struct AddFoodZoneEvent(pub SideIPos);
 
 /// The side view of the world. The idea is that if we have time we can do a top down view on the
 /// surface of the world.
@@ -294,5 +296,18 @@ pub fn update_food_tile_rendering(
             .id();
 
         commands.entity(entity).push_children(&[child]);
+    }
+}
+
+/// Grab some zone events, check if they exist and remove them if they do to accommodate different zone types.
+pub fn add_zones(
+    mut commands: Commands,
+    mut food_state: ResMut<FoodState>,
+    mut add_zone_reader: EventReader<AddFoodZoneEvent>,
+) {
+    for AddFoodZoneEvent(position) in add_zone_reader.iter() {
+        // TODO: Add child sprite
+
+        food_state.food_zones.add(*position);
     }
 }

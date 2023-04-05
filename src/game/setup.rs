@@ -4,7 +4,8 @@ use crate::game::eggs::Egg;
 use crate::game::food::{CarryingFood, FoodId, FoodType};
 use crate::game::hunger::Hunger;
 use crate::game::map::{
-    CellContent, ExitPositions, SideMapPosToEntities, UpdateFoodRenderingEvent, SIDE_CELL_SIZE,
+    AddFoodZoneEvent, CellContent, ExitPositions, SideMapPosToEntities, UpdateFoodRenderingEvent,
+    SIDE_CELL_SIZE,
 };
 use crate::game::pathfinding::{Path, SideMapGraph};
 use crate::game::plugin::{Crawler, PlayerState, Speed, ANT_Z, DIRT_Z, QUEEN_Z};
@@ -47,8 +48,16 @@ pub fn setup_map(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut debug_lines: ResMut<DebugLines>,
+
+    // TODO: Temporary...
+    mut add_zone_writer: EventWriter<AddFoodZoneEvent>,
+
+    // TODO: Temporary...
     mut update_food_rendering_writer: EventWriter<UpdateFoodRenderingEvent>,
 ) {
+    // TODO: Temporary...
+    add_zone_writer.send(AddFoodZoneEvent(SideIPos::new(10, -10)));
+
     let mut side_map_pos_to_entities = HashMap::with_capacity(1_000);
 
     // This is a temporary structure to help us build the graph for this system only.
@@ -98,7 +107,7 @@ pub fn setup_map(
                         (255f32 - rand::random::<f32>() * (255.0 / 5f32) * y.abs() as f32) as u8,
                     )
                 } else {
-                    if rand::random::<u8>() < 5 {
+                    if random::<u8>() < 5 {
                         CellContent::rock(true)
                     } else {
                         CellContent::random_dirt()
@@ -113,13 +122,13 @@ pub fn setup_map(
             let mut entity = commands.spawn_empty();
 
             if let Some(texture_path) = texture_path {
-                // let sprite_bundle = SpriteBundle {
-                //     sprite: sprite(),
-                //     transform,
-                //     texture: asset_server.load(texture_path),
-                //     ..Default::default()
-                // };
-                // entity.insert(sprite_bundle);
+                let sprite_bundle = SpriteBundle {
+                    sprite: sprite(),
+                    transform,
+                    texture: asset_server.load(texture_path),
+                    ..Default::default()
+                };
+                entity.insert(sprite_bundle);
             }
 
             let entity_id = entity.insert((cell_content, side_pos)).id();
@@ -151,6 +160,9 @@ pub fn setup_map(
             }
         }
     }
+
+    // Explicitly drop the temporary side_map_pos_to_cell, just as a reminder that it's temporary.
+    drop(side_map_pos_to_cell);
 
     println!(
         "Graph has {} nodes and {} edges",
@@ -188,9 +200,6 @@ pub fn setup_map(
         );
     }
     commands.insert_resource(ExitPositions::from(exit_positions));
-
-    // Explicitly drop the temporary side_map_pos_to_cell, just as a reminder that it's temporary.
-    drop(side_map_pos_to_cell);
 }
 
 pub fn setup_queen(mut commands: Commands, asset_server: Res<AssetServer>) {

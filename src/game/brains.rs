@@ -14,7 +14,7 @@ use crate::game::food::{
 use crate::game::hunger::Hunger;
 use crate::game::map::{ExitPositions, SideMapPosToEntities, UpdateFoodRenderingEvent};
 use crate::game::pathfinding::Path;
-use crate::game::plugin::PlayerState;
+use crate::game::plugin::{PlayerState, QueensChoice};
 use crate::game::positions::SideIPos;
 use crate::game::queen::Queen;
 use crate::game::time::GameTime;
@@ -320,8 +320,8 @@ pub struct OfferFoodDiscoveryToQueenAction;
 pub fn offer_food_discovery_to_queen_action(
     mut commands: Commands,
     mut time: ResMut<GameTime>,
-    mut contexts: EguiContexts,
     mut food_state: ResMut<FoodState>,
+    mut player_state: ResMut<PlayerState>,
     mut ants: Query<(Entity, &Children), With<AntType>>,
     carrying_discovered_food: Query<&CarryingDiscoveredFood>,
     mut query: Query<(&Actor, &mut ActionState), With<OfferFoodDiscoveryToQueenAction>>,
@@ -350,49 +350,43 @@ pub fn offer_food_discovery_to_queen_action(
         match *state {
             ActionState::Requested => {
                 time.system_pause(true);
+                player_state.queens_choice = QueensChoice::Undecided(food_info.food_id);
                 *state = ActionState::Executing;
             }
             ActionState::Executing => {
                 // Show an egui dialog. TODO: Should probably be in another system!
                 // TODO: This is flickering. Maybe putting it in another system might help?
 
-                egui::Window::new("Queen's Choice")
-                    .anchor(Align2::CENTER_CENTER, egui::Vec2::ZERO)
-                    .show(&contexts.ctx_mut(), |ui| {
-                        ui.heading("This scout has found new food!");
-                        ui.label(format!("Food Type: {:?}", *food_info));
-                        ui.heading("This is fake info for now (:");
-                        ui.label(" + The Queen grows eggs 2x faster.");
-                        ui.label(" - The Queen needs 3x as much food.");
-                        ui.label(" + New ants walk 3x faster");
-                        ui.label(" - Ants eat 2x slower");
-                        ui.label("Do you want to add this food to the colony?");
-                        ui.horizontal(|ui| {
-                            let mut done = false;
+                let mut done = false;
+                match player_state.queens_choice {
+                    QueensChoice::None => {
+                        warn!("Not in a state to offer food to the queen.");
+                        *state = ActionState::Failure;
+                    }
+                    QueensChoice::Undecided(_) => {
+                        // Still waiting
+                    }
+                    QueensChoice::Approve => {
+                        // Add the food to the food state.
+                        food_state.approve_food(**food_info);
 
-                            if ui.button("Yes").clicked() {
-                                // Add the food to the food state.
-                                food_state.approve_food(**food_info);
+                        // TODO: The queen eats the new food even if she is full.
 
-                                // TODO: The queen eats the new food even if she is full.
+                        done = true;
+                    }
+                    QueensChoice::Deny => {
+                        // TODO: The queen eats the ant even if she is full.
+                        // Food just vanishes.
+                        food_state.reject_food(food_info.food_id);
+                        done = true;
+                    }
+                }
 
-                                done = true;
-                            }
-                            if ui.button("No").clicked() {
-                                // TODO: The queen eats the ant even if she is full.
-                                // Food just vanishes.
-
-                                food_state.reject_food(food_info.food_id);
-                                done = true;
-                            }
-
-                            if done {
-                                commands.entity(food_entity).despawn_recursive();
-                                time.system_pause(false);
-                                *state = ActionState::Success;
-                            }
-                        });
-                    });
+                if done {
+                    commands.entity(food_entity).despawn_recursive();
+                    time.system_pause(false);
+                    *state = ActionState::Success;
+                }
             }
             _ => {}
         }

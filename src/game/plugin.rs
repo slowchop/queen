@@ -1,7 +1,8 @@
 use crate::game;
 use crate::game::ants::AntType;
 use crate::game::eggs::SpawnAntEvent;
-use crate::game::map::{UpdateFoodRenderingEvent, UpdateTileDirtAmountEvent};
+use crate::game::food::FoodId;
+use crate::game::map::{AddFoodZoneEvent, UpdateFoodRenderingEvent, UpdateTileDirtAmountEvent};
 use crate::game::pathfinding::VisitedNodeEvent;
 use crate::game::positions::SideIPos;
 use crate::game::queen::{EggLaidEvent, Queen};
@@ -59,6 +60,7 @@ impl Plugin for GamePlugin {
         app.add_event::<food::AddFoodForAntToCarryEvent>();
         app.add_event::<UpdateTileDirtAmountEvent>();
         app.add_event::<UpdateFoodRenderingEvent>();
+        app.add_event::<AddFoodZoneEvent>();
 
         app.insert_resource(GameTime::default());
         app.insert_resource(ui::IsHoveringOverUi::default());
@@ -78,7 +80,7 @@ impl Plugin for GamePlugin {
         app.add_systems((time::new_frame, ui::reset_hovering_over_ui_flag).in_set(InputSet::Reset));
 
         // Ui
-        app.add_systems((ui::control,).in_set(InputSet::Ui));
+        app.add_systems((ui::control, ui::show_queens_choice).in_set(InputSet::Ui));
 
         // ProcessInput
         app.add_systems(
@@ -148,6 +150,16 @@ impl Plugin for GamePlugin {
 pub struct PlayerState {
     pub action_mode: ActionMode,
     pub queen_laying_ant_type: AntType,
+    pub queens_choice: QueensChoice,
+}
+
+#[derive(Debug, Default)]
+pub enum QueensChoice {
+    #[default]
+    None,
+    Undecided(FoodId),
+    Approve,
+    Deny,
 }
 
 #[derive(PartialEq, Debug, Default)]
