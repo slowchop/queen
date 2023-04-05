@@ -147,6 +147,8 @@ pub fn setup_map(
                     ..Default::default()
                 };
                 entity.insert(sprite_bundle);
+            } else {
+                entity.insert(transform);
             }
 
             let entity_id = entity.insert((cell_content, side_pos)).id();

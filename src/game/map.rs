@@ -174,17 +174,16 @@ pub fn detect_cell_content_changes_and_update_graph(
     mut debug_lines: ResMut<DebugLines>,
     mut graph: ResMut<SideMapGraph>,
     mut side_map_pos_to_entities: ResMut<SideMapPosToEntities>,
-    mut query: Query<(&CellContent, &Transform)>,
+    mut query: Query<(&CellContent, &SideIPos)>,
     mut update_tile_rendering_event: EventReader<UpdateTileDirtAmountEvent>,
 ) {
     for UpdateTileDirtAmountEvent(entity) in update_tile_rendering_event.iter() {
         // Grab the CellContent for this entity.
-        let Ok((cell, transform)) = query.get(*entity) else {
+        let Ok((cell, pos)) = query.get(*entity) else {
             warn!(?entity, "Could not find CellContent for entity");
             continue;
         };
 
-        let pos = SideIPos::from(transform);
         let Some(a_weight) = cell.weight() else {
             warn!(?entity, ?pos, "Could not find weight for cell content");
             continue;
@@ -207,27 +206,23 @@ pub fn detect_cell_content_changes_and_update_graph(
             // TODO: This is similar to the map generation code, so we should probably factor it out.
             let weight = a_weight as u64 + b_weight as u64;
             // graph.add_edge(*pos, neighbour, weight as u64);
-            graph.edge_weight_mut(pos, neighbour).map(|w| *w = weight);
+            graph.edge_weight_mut(*pos, neighbour).map(|w| *w = weight);
         }
     }
 
     // Debug draw the graph grid
-    // for edge in graph.edge_references() {
-    //     let weight = edge.weight();
-    //     let a = edge.source().to_world_vec2()
-    //         + SIDE_CELL_SIZE as f32 / 2f32
-    //         + rand::random::<f32>() * 5.1;
-    //     let b = edge.target().to_world_vec2()
-    //         + SIDE_CELL_SIZE as f32 / 2f32
-    //         + rand::random::<f32>() * 5.1;
-    //
-    //     debug_lines.line_colored(
-    //         a.extend(10f32),
-    //         b.extend(10f32),
-    //         0.0,
-    //         Color::rgb(*weight as f32 / 255f32, 1f32 - *weight as f32 / 255f32, 0.0),
-    //     );
-    // }
+    for edge in graph.edge_references() {
+        let weight = edge.weight();
+        let a = edge.source().to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
+        let b = edge.target().to_world_vec2() + SIDE_CELL_SIZE as f32 / 2f32;
+
+        debug_lines.line_colored(
+            a.extend(10f32),
+            b.extend(10f32),
+            0.0,
+            Color::rgb(*weight as f32 / 255f32, 1f32 - *weight as f32 / 255f32, 0.0),
+        );
+    }
 }
 
 pub fn update_tile_rendering(
