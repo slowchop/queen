@@ -21,7 +21,7 @@ impl From<Vec<SideIPos>> for ExitPositions {
 
 pub struct UpdateTileDirtAmountEvent(pub Entity);
 
-pub struct UpdateFoodRenderingEvent(pub Entity);
+pub struct UpdateFoodRenderingEvent(pub SideIPos);
 
 pub struct AddFoodZoneEvent(pub SideIPos);
 
@@ -258,30 +258,37 @@ pub struct ChildCellForFood;
 
 pub fn update_food_tile_rendering(
     mut commands: Commands,
+    food_state: Res<FoodState>,
+    side_map_to_entities: Res<SideMapPosToEntities>,
     asset_server: Res<AssetServer>,
-    query: Query<(Entity, &Transform, Option<&Children>)>,
+    tiles: Query<(Option<&Children>)>,
     child_food_cells: Query<&ChildCellForFood>,
     mut update_food_rendering_reader: EventReader<UpdateFoodRenderingEvent>,
 ) {
-    for UpdateFoodRenderingEvent(entity) in update_food_rendering_reader.iter() {
-        let Ok((entity, transform, maybe_children)) = query.get(*entity) else {
-            error!(?entity, "Could not find entity in query");
+    for UpdateFoodRenderingEvent(pos) in update_food_rendering_reader.iter() {
+        let Some(entity) = side_map_to_entities.get(pos) else {
+            warn!("No cell found at position {:?} for update_food_tile_rendering", pos);
             continue;
         };
 
-        // // Remove the child cells because we're going to re-add them.
-        // if let Some(child_food_cell) = maybe_children {
-        //     for child in child_food_cell.iter() {
-        //         if let Ok(_) = child_food_cells.get(*child) {
-        //             commands.entity(*child).despawn_recursive();
-        //         }
-        //     }
-        // }
+        let Ok(maybe_children) = tiles.get(*entity) else {
+            warn!("Could not find entity in query");
+            continue;
+        };
 
-        // if food_cell.is_empty() {
-        //     println!("empty");
-        //     // continue;
-        // }
+        // Remove the child cells because we might re-add them.
+        if let Some(child_food_cell) = maybe_children {
+            for child in child_food_cell.iter() {
+                if let Ok(_) = child_food_cells.get(*child) {
+                    commands.entity(*child).despawn_recursive();
+                }
+            }
+        }
+
+        let Some(food_cell) = food_state.info_at_position(pos) else {
+            todo!("Clear out the children (should be done above)");
+            continue;
+        };
 
         println!("Adding child food cell");
         // TODO: This is executing but the food isn't visible for some reason.
@@ -295,19 +302,6 @@ pub fn update_food_tile_rendering(
             .insert(ChildCellForFood)
             .id();
 
-        commands.entity(entity).push_children(&[child]);
-    }
-}
-
-/// Grab some zone events, check if they exist and remove them if they do to accommodate different zone types.
-pub fn add_zones(
-    mut commands: Commands,
-    mut food_state: ResMut<FoodState>,
-    mut add_zone_reader: EventReader<AddFoodZoneEvent>,
-) {
-    for AddFoodZoneEvent(position) in add_zone_reader.iter() {
-        // TODO: Add child sprite
-
-        food_state.food_zones.add(*position);
+        commands.entity(*entity).push_children(&[child]);
     }
 }

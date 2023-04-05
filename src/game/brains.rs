@@ -132,9 +132,7 @@ pub fn place_food_if_possible_action(
         // 4) The sprites for the food will update elsewhere when changed.
         let pos = SideIPos::from(transform);
         food_state.add_food_at_position(pos, &carrying_food);
-
-        panic!("The entity here should be the entity of the tile we're on.");
-        update_food_rendering_writer.send(UpdateFoodRenderingEvent(entity));
+        update_food_rendering_writer.send(UpdateFoodRenderingEvent(pos));
 
         *state = ActionState::Success;
     }
@@ -396,8 +394,6 @@ pub fn offer_food_discovery_to_queen_action(
     }
 }
 
-// PickUpFoodAction
-
 #[derive(Clone, Component, Debug, ActionBuilder)]
 pub struct PickUpFoodAction;
 
@@ -425,6 +421,8 @@ pub fn pick_up_food_action(
 
         info!(">>>>>>>>>> Picked up food at {:?}", pos);
         carry_food_writer.send(AddFoodForAntToCarryEvent::food(entity, carrying_food));
+
+        *state = ActionState::Success;
     }
 }
 
@@ -466,5 +464,7 @@ pub fn feed_queen_action(
 
         let queen_hunger = queen.single_mut();
         warn!("TODO: queen_hunger");
+
+        *state = ActionState::Success;
     }
 }

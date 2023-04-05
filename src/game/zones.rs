@@ -1,3 +1,5 @@
+use crate::game::food::FoodState;
+use crate::game::map::AddFoodZoneEvent;
 use crate::game::positions::SideIPos;
 use bevy::prelude::*;
 use bevy::utils::HashSet;
@@ -26,3 +28,16 @@ impl Zones {
 
 #[derive(Default, Debug, Deref, DerefMut)]
 pub struct FoodStorageZones(Zones);
+
+/// Grab some zone events, check if they exist and remove them if they do to accommodate different zone types.
+pub fn add_food_zones(
+    mut commands: Commands,
+    mut food_state: ResMut<FoodState>,
+    mut add_zone_reader: EventReader<AddFoodZoneEvent>,
+) {
+    for AddFoodZoneEvent(position) in add_zone_reader.iter() {
+        // TODO: Add child sprite
+
+        food_state.food_zones.add(*position);
+    }
+}

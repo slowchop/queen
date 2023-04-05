@@ -28,6 +28,7 @@ pub fn pathfinding_action(
             ActionState::Requested => {
                 // We expect to already have a path set.
                 if !path.is_progressing() {
+                    error!("Path expected to be set in pathfinding_action but it wasn't");
                     *state = ActionState::Failure;
                     continue;
                 }
@@ -38,6 +39,7 @@ pub fn pathfinding_action(
                 if path.did_complete() {
                     *state = ActionState::Success;
                 } else if path.did_fail() {
+                    error!("Path failed for actor {:?} in pathfinding_action", actor);
                     *state = ActionState::Failure;
                 }
             }
@@ -191,7 +193,7 @@ pub fn set_path_to_stored_food_action(
             continue;
         };
 
-        info!("------ Taking food from {:?}", target);
+        info!("------ Pathing to stored food at {:?}", target);
         path.set_target(target);
 
         *state = ActionState::Success;

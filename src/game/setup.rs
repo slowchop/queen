@@ -27,7 +27,7 @@ use rand::random;
 //     SideIPos::new(0, -20)
 // }
 pub fn queen_start() -> SideIPos {
-    SideIPos::new(0, -2)
+    SideIPos::new(0, -20)
 }
 
 /// We want the transform position specified to be on the top left of the rendered sprite.
@@ -59,6 +59,19 @@ pub fn setup_map(
 ) {
     // TODO: Temporary...
     add_zone_writer.send(AddFoodZoneEvent(SideIPos::new(10, -10)));
+
+    // XXX: Temporary...
+    {
+        let side_pos = SideIPos::new(10, -10);
+        update_food_rendering_writer.send(UpdateFoodRenderingEvent(side_pos));
+        food_state.add_food_at_position(
+            side_pos,
+            &CarryingFood {
+                food_id: FoodId(FoodType::Banana),
+                amount: 5,
+            },
+        )
+    }
 
     let mut side_map_pos_to_entities = HashMap::with_capacity(1_000);
 
@@ -134,18 +147,6 @@ pub fn setup_map(
             }
 
             let entity_id = entity.insert((cell_content, side_pos)).id();
-
-            // XXX: Temporary...
-            if random::<u8>() == 0 {
-                update_food_rendering_writer.send(UpdateFoodRenderingEvent(entity_id));
-                food_state.add_food_at_position(
-                    side_pos,
-                    &CarryingFood {
-                        food_id: FoodId(FoodType::Banana),
-                        amount: 5,
-                    },
-                )
-            }
 
             side_map_pos_to_entities.insert(side_pos, entity_id);
             side_map_pos_to_cell.insert(side_pos, cell_content);
@@ -226,18 +227,18 @@ pub fn setup_queen(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((sprite_bundle, Queen::default(), Hunger::default()));
 }
 
-pub fn setup_test_eggs(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    mut egg_laid_writer: EventWriter<EggLaidEvent>,
-) {
-    egg_laid_writer.send(EggLaidEvent {
-        egg: Egg {
-            ant_type: Default::default(),
-            growth: 0.0,
-            hatch_at: 3.0,
-        },
-        position: SideIPos::new(-2, 0),
-    });
-}
+// pub fn setup_test_eggs(
+//     mut commands: Commands,
+//     asset_server: Res<AssetServer>,
+//     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+//     mut egg_laid_writer: EventWriter<EggLaidEvent>,
+// ) {
+//     egg_laid_writer.send(EggLaidEvent {
+//         egg: Egg {
+//             ant_type: Default::default(),
+//             growth: 0.0,
+//             hatch_at: 3.0,
+//         },
+//         position: SideIPos::new(-2, 0),
+//     });
+// }

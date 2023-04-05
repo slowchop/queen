@@ -71,7 +71,7 @@ impl Plugin for GamePlugin {
             camera::setup,
             setup::setup_map,
             setup::setup_queen,
-            setup::setup_test_eggs,
+            // setup::setup_test_eggs,
             mouse::setup,
             ui::setup,
         ));
@@ -108,6 +108,7 @@ impl Plugin for GamePlugin {
                 game::ants::spawn_ants,
                 game::hunger::hunger_system,
                 game::food::attach_food_to_ant,
+                game::zones::add_food_zones,
             )
                 .in_set(InputSet::Game),
         );
@@ -133,6 +134,7 @@ impl Plugin for GamePlugin {
                 brains::offer_food_discovery_to_queen_action,
                 brains::place_food_if_possible_action,
                 brains::pick_up_food_action,
+                brains::feed_queen_action,
             )
                 .in_set(BigBrainSet::Actions),
         );

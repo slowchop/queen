@@ -120,7 +120,7 @@ pub struct FoodState {
     pub rejected: HashSet<FoodId>,
     pub next_discover_time: NextDiscoverTime,
     pub food_zones: FoodStorageZones,
-    pub food_positions: HashMap<SideIPos, FoodCell>,
+    pub food_position_cells: HashMap<SideIPos, FoodCell>,
 }
 
 impl FoodState {
@@ -138,13 +138,13 @@ impl FoodState {
     }
 
     pub fn find_destination_to_take_food(&self) -> Option<SideIPos> {
-        if self.food_positions.is_empty() {
+        if self.food_position_cells.is_empty() {
             return None;
         }
 
         let mut rng = rand::thread_rng();
-        let index = rng.gen_range(0..self.food_positions.len());
-        self.food_positions.keys().nth(index).copied()
+        let index = rng.gen_range(0..self.food_position_cells.len());
+        self.food_position_cells.keys().nth(index).copied()
     }
 
     pub fn approve_food(&mut self, found: DiscoveredFood) {
@@ -190,18 +190,34 @@ impl FoodState {
         })
     }
 
+    pub fn info_at_position(&self, position: &SideIPos) -> Option<&FoodCell> {
+        self.food_position_cells.get(position)
+    }
+
     pub fn add_food_at_position(&mut self, position: SideIPos, food: &CarryingFood) {
-        let food_cell = self.food_positions.entry(position).or_default();
+        let food_cell = self.food_position_cells.entry(position).or_default();
         food_cell.add(food);
     }
 
     pub fn take_food_from_position(&mut self, position: SideIPos) -> Option<CarryingFood> {
-        let food_cell = self.food_positions.get_mut(&position)?;
+        let food_cell = self.food_position_cells.get_mut(&position)?;
         if food_cell.is_empty() {
+            error!("Food cell shouldn't be empty 1!");
             return None;
         }
 
-        food_cell.take_any_food_up_to_max_amount(DEFAULT_CARGO_CAPACITY)
+        let maybe_carrying_food = food_cell.take_any_food_up_to_max_amount(DEFAULT_CARGO_CAPACITY);
+        if maybe_carrying_food.is_none() {
+            error!("Food cell shouldn't be empty 2!");
+            return None;
+        }
+
+        if food_cell.is_empty() {
+            info!("cell is now empty");
+            self.food_position_cells.remove(&position);
+        }
+
+        maybe_carrying_food
     }
 
     pub fn eta(&self, food_id: &FoodId) -> Option<Duration> {
