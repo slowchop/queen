@@ -16,17 +16,53 @@ use big_brain::prelude::*;
 use rand::prelude::SliceRandom;
 use std::time::Duration;
 
-/// A scout or cargo ant to leave the map for food.
+/// Actor is on a path. This action is to follow the path and finish when the path is finished.
 #[derive(Clone, Component, Debug, ActionBuilder)]
-pub struct LeaveMapAction;
+pub struct PathfindingAction;
 
-pub fn leave_map_action(
-    exit_positions: Res<ExitPositions>,
-    mut ants: Query<(&mut Path, &mut Visibility), With<AntType>>,
-    mut query: Query<(&Actor, &mut ActionState), With<LeaveMapAction>>,
+pub fn pathfinding_action(
+    mut ants: Query<&mut Path>,
+    mut query: Query<(&Actor, &mut ActionState), With<PathfindingAction>>,
 ) {
     for (Actor(actor), mut state) in query.iter_mut() {
-        let Ok((mut path, mut visibility)) = ants.get_mut(*actor) else {
+        let Ok(mut path) = ants.get_mut(*actor) else {
+            warn!("No path for actor {:?}", actor);
+            continue;
+        };
+
+        match *state {
+            ActionState::Requested => {
+                // We expect to already have a path set.
+                if !path.is_progressing() {
+                    *state = ActionState::Failure;
+                    continue;
+                }
+
+                *state = ActionState::Executing;
+            }
+            ActionState::Executing => {
+                if path.did_complete() {
+                    *state = ActionState::Success;
+                } else if path.did_fail() {
+                    *state = ActionState::Failure;
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// A scout or cargo ant needs to find a destination to the outside.
+#[derive(Clone, Component, Debug, ActionBuilder)]
+pub struct SetPathToOutsideAction;
+
+pub fn set_path_to_outside_action(
+    exit_positions: Res<ExitPositions>,
+    mut ants: Query<&mut Path>,
+    mut query: Query<(&Actor, &mut ActionState), With<SetPathToOutsideAction>>,
+) {
+    for (Actor(actor), mut state) in query.iter_mut() {
+        let Ok(mut path) = ants.get_mut(*actor) else {
             warn!("No path for actor {:?}", actor);
             continue;
         };
@@ -43,17 +79,52 @@ pub fn leave_map_action(
 
                 path.set_target(*exit_position);
 
-                *state = ActionState::Executing;
+                *state = ActionState::Success;
             }
-            ActionState::Executing => {
-                // Check if path is complete and is at the exit position.
-                if path.did_complete() {
-                    *visibility = Visibility::Hidden;
-                    *state = ActionState::Success;
-                } else if path.did_fail() {
-                    *state = ActionState::Failure;
-                }
-                // Still going to the exit position.
+            _ => {}
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TransitionDirection {
+    Enter,
+    Exit,
+}
+
+/// When an ant has hit the map exit, we make them invisible, or vice versa.
+#[derive(Clone, Component, Debug, ActionBuilder, Deref)]
+pub struct MapTransitionAction(TransitionDirection);
+
+impl MapTransitionAction {
+    pub fn enter() -> Self {
+        Self(TransitionDirection::Enter)
+    }
+
+    pub fn exit() -> Self {
+        Self(TransitionDirection::Exit)
+    }
+}
+
+pub fn map_transition_action(
+    mut ants: Query<&mut Visibility>,
+    mut query: Query<(&Actor, &mut ActionState, &MapTransitionAction)>,
+) {
+    for (Actor(actor), mut state, transition) in query.iter_mut() {
+        let Ok(mut visibility) = ants.get_mut(*actor) else {
+            warn!("No visibility for actor {:?}", actor);
+            continue;
+        };
+
+        match *state {
+            ActionState::Requested => {
+                *visibility = if **transition == TransitionDirection::Enter {
+                    Visibility::Visible
+                } else {
+                    Visibility::Hidden
+                };
+
+                *state = ActionState::Success;
             }
             _ => {}
         }
@@ -70,7 +141,7 @@ pub struct OutsideMapDiscoveringNewFoodAction {
 pub fn outside_map_discovering_food_action(
     time: Res<GameTime>,
     mut food_state: ResMut<FoodState>,
-    mut ants: Query<(Entity, &Transform, &mut Visibility), With<AntType>>,
+    mut ants: Query<(Entity, &Transform)>,
     mut query: Query<(
         &Actor,
         &mut ActionState,
@@ -79,7 +150,7 @@ pub fn outside_map_discovering_food_action(
     mut carry_food_writer: EventWriter<AddFoodForAntToCarryEvent>,
 ) {
     for (Actor(actor), mut state, mut action) in query.iter_mut() {
-        let Ok((entity, transform, mut visibility)) = ants.get_mut(*actor) else {
+        let Ok((entity, transform)) = ants.get_mut(*actor) else {
             warn!(?actor, "No transform + visibility found with AntType.");
             continue;
         };
@@ -89,6 +160,7 @@ pub fn outside_map_discovering_food_action(
                 let time_left = food_state.next_discover_time.get_and_increase();
                 action.initial_time = time_left;
                 action.time_left = time_left;
+
                 *state = ActionState::Executing;
             }
             ActionState::Executing => {
@@ -96,8 +168,6 @@ pub fn outside_map_discovering_food_action(
                 if action.time_left != Duration::ZERO {
                     continue;
                 }
-                // Ant is back on the map!
-                *visibility = Visibility::Visible;
 
                 // Give the ant some food to carry.
                 carry_food_writer.send(AddFoodForAntToCarryEvent::discovered(
@@ -117,20 +187,16 @@ pub fn outside_map_discovering_food_action(
     }
 }
 
-/// The ant is off the map going to get approved food.
-#[derive(Clone, Component, Debug, ActionBuilder)]
-pub struct OutsideMapGettingApprovedFoodAction;
-
 /// Move to The Queen!
 #[derive(Clone, Component, Debug, ActionBuilder)]
-pub struct MoveToQueenAction;
+pub struct SetPathToQueenAction;
 
-pub fn move_to_queen_action(
+pub fn set_path_to_queen_action(
     queen: Query<&Transform, With<Queen>>,
-    mut ants: Query<&mut Path, With<AntType>>,
-    mut query: Query<(&Actor, &mut ActionState, &mut MoveToQueenAction)>,
+    mut ants: Query<&mut Path>,
+    mut query: Query<(&Actor, &mut ActionState), With<SetPathToQueenAction>>,
 ) {
-    for (Actor(actor), mut state, mut action) in query.iter_mut() {
+    for (Actor(actor), mut state) in query.iter_mut() {
         let Ok(mut path) = ants.get_mut(*actor) else {
             warn!(?actor, "No path found.");
             continue;
@@ -140,17 +206,9 @@ pub fn move_to_queen_action(
             ActionState::Requested => {
                 let queen_transform = queen.single();
                 let queen_position = SideIPos::from(queen_transform);
-
                 path.set_target(queen_position);
 
-                *state = ActionState::Executing;
-            }
-            ActionState::Executing => {
-                if path.did_complete() {
-                    *state = ActionState::Success;
-                } else if path.did_fail() {
-                    *state = ActionState::Failure;
-                }
+                *state = ActionState::Success;
             }
             _ => {}
         }

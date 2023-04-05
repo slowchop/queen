@@ -114,9 +114,11 @@ impl Plugin for GamePlugin {
         // Brain things
         app.add_systems(
             (
-                brains::leave_map_action,
+                brains::pathfinding_action,
+                brains::set_path_to_outside_action,
+                brains::map_transition_action,
                 brains::outside_map_discovering_food_action,
-                brains::move_to_queen_action,
+                brains::set_path_to_queen_action,
                 brains::offer_food_discovery_to_queen_action,
             )
                 .in_set(BigBrainSet::Actions),
