@@ -1,3 +1,5 @@
+use strum::{EnumCount, FromRepr};
+
 ///! Side effects!
 ///!
 ///! Example side effects might be (in english):
@@ -21,44 +23,97 @@
 ///!   "Cargo ants will take 2x longer to gather food"
 ///!   "Cargo ants will lose half the food they gather"
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumCount)]
 pub enum SideEffect {
-    NewAnts(EffectType),
-    AllAnts(EffectType),
-    Queen(EffectType),
+    NewAnts(AntEffectType),
+    AllAnts(AntEffectType),
+    Queen(QueenEffectType),
 }
 
 impl SideEffect {
+    /// Would be cool if some foods gave specific effects.
+    pub fn random() -> Self {
+        let random = rand::random::<u32>() % SideEffect::COUNT;
+        match random {
+            0 => Self::NewAnts(AntEffectType::random()),
+            1 => Self::AllAnts(AntEffectType::random()),
+            2 => Self::Queen(QueenEffectType::random()),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn score(&self) -> i32 {
+        match self {
+            Self::NewAnts(effect) => effect.score(),
+            Self::AllAnts(effect) => effect.score(),
+            Self::Queen(effect) => effect.score(),
+        }
+    }
+
     pub fn short_name(&self) -> String {
         let mut s = String::new();
 
-        let effect_type = match self {
+        match self {
             SideEffect::NewAnts(effect_type) => {
                 s.push_str("New: ");
-                effect_type
+                effect_type.short_name_mutate(&mut s);
             }
             SideEffect::AllAnts(effect_type) => {
                 s.push_str("All: ");
-                effect_type
+                effect_type.short_name_mutate(&mut s);
             }
             SideEffect::Queen(effect_type) => {
                 s.push_str("Queen: ");
-                effect_type
+                effect_type.short_name_mutate(&mut s);
             }
-        };
-
-        effect_type.short_name_mutate(&mut s);
+        }
 
         s
     }
 }
 
-pub enum EffectType {
-    WalkSpeed(Multiplier),
+#[derive(EnumCount, FromRepr)]
+pub enum QueenEffectType {
     HatchRate(Multiplier),
+    HungerRate(Multiplier),
+}
+
+impl QueenEffectType {
+    pub fn random() -> Self {
+        let random = rand::random::<u32>() % QueenEffectType::COUNT;
+        match random {
+            0 => Self::HatchRate(Multiplier::random()),
+            1 => Self::HungerRate(Multiplier::random()),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn score(&self) -> i32 {
+
+    }
+}
+
+#[derive(EnumCount, FromRepr)]
+pub enum AntEffectType {
+    HungerRate(Multiplier),
+    WalkSpeed(Multiplier),
     SquishRate(Multiplier),
 }
 
-impl EffectType {
+impl AntEffectType {
+    pub fn score(&self) -> i32 {
+        match self {
+            Self::HungerRate(multiplier) => 20 * multiplier.score(),
+            Self::WalkSpeed(multiplier) => 10 * multiplier.score(),
+            Self::SquishRate(multiplier) => 5 * multiplier.score(),
+        }
+    }
+
+    pub fn random() -> Self {
+        let random = rand::random::<usize>() % Self::COUNT;
+        Self::from_repr(random).unwrap()
+    }
+
     pub fn short_name(&self) -> String {
         let mut s = String::new();
         self.short_name_mutate(&mut s);
@@ -67,15 +122,11 @@ impl EffectType {
 
     pub fn short_name_mutate(&self, mut s: &mut String) {
         let multiplier = match self {
-            EffectType::WalkSpeed(multiplier) => {
+            Self::WalkSpeed(multiplier) => {
                 s.push_str("Walk ");
                 multiplier
             }
-            EffectType::HatchRate(multiplier) => {
-                s.push_str("Hatch ");
-                multiplier
-            }
-            EffectType::SquishRate(multiplier) => {
+            Self::SquishRate(multiplier) => {
                 s.push_str("Squish ");
                 multiplier
             }
@@ -91,6 +142,24 @@ pub enum Multiplier {
 }
 
 impl Multiplier {
+    /// Increase or decrease by range 2x, 3x, 4x, 5x
+    pub fn random() -> Self {
+        let random = rand::random::<u32>() % 2;
+        let amount = (rand::random::<u32>() % 4 + 2) as u8;
+        match random {
+            0 => Self::IncreaseBy(amount),
+            1 => Self::DecreaseBy(amount),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn score(&self) -> i32 {
+        match self {
+            Self::IncreaseBy(amount) => *amount as i32,
+            Self::DecreaseBy(amount) => -(*amount as i32),
+        }
+    }
+
     pub fn short_name(&self) -> String {
         let mut s = String::new();
         self.short_name_mutate(&mut s);
