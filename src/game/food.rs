@@ -4,9 +4,9 @@ use crate::game::setup::queen_start;
 use crate::game::zones::FoodStorageZones;
 use bevy::prelude::*;
 use bevy::utils::{HashMap, HashSet};
-use rand::prelude::IteratorRandom;
 use rand::{random, Rng};
 use std::time::Duration;
+use crate::game::side_effects::SideEffect;
 
 pub const DEFAULT_CARGO_CAPACITY: u32 = 10;
 
@@ -16,9 +16,33 @@ pub struct AddFoodForAntToCarryEvent {
     pub data: CarryFoodType,
 }
 
+pub struct FoodInfo {
+    pub food_id: FoodId,
+    pub side_effects: Vec<SideEffect>,
+}
+
 pub enum CarryFoodType {
     Food(CarryingFood),
     DiscoveredFood(DiscoveredFood),
+}
+
+/// A food and amount.
+///
+/// This could mean an ant carrying food, or a cell containing food.
+///
+/// Note: Attached to a child of an ant or cell for the sake of rendering something else.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct CarryingFood {
+    pub food_id: FoodId,
+    pub amount: u32,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct DiscoveredFood {
+    pub food_id: FoodId,
+    pub position: SideIPos,
+    pub time_to_discover: Duration,
+    pub stash_remaining: u32,
 }
 
 impl AddFoodForAntToCarryEvent {
@@ -44,17 +68,6 @@ pub struct AssignedFoodId(pub Option<FoodId>);
 /// Note: Attached to a child of the ant.
 #[derive(Component, Deref, Debug)]
 pub struct CarryingDiscoveredFood(DiscoveredFood);
-
-/// A food and amount.
-///
-/// This could mean an ant carrying food, or a cell containing food.
-///
-/// Note: Attached to a child of an ant or cell for the sake of rendering something else.
-#[derive(Component, Debug, Clone, Copy)]
-pub struct CarryingFood {
-    pub food_id: FoodId,
-    pub amount: u32,
-}
 
 pub fn attach_food_to_ant(
     mut commands: Commands,
@@ -85,14 +98,6 @@ pub fn attach_food_to_ant(
 
         commands.entity(event.entity).push_children(&[child_entity]);
     }
-}
-
-#[derive(Copy, Clone, Debug)]
-pub struct DiscoveredFood {
-    pub food_id: FoodId,
-    pub position: SideIPos,
-    pub time_to_discover: Duration,
-    pub stash_remaining: u32,
 }
 
 #[derive(Resource, Default)]

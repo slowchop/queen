@@ -1,9 +1,9 @@
 # Temporary vendoring while I travel
 
-[source.crates-io]
-replace-with = "vendored-sources"
-[source.vendored-sources]
-directory = "vendor"
+#[source.crates-io]
+#replace-with = "vendored-sources"
+#[source.vendored-sources]
+#directory = "vendor"
 
 # NOTE: I (gak) haven't tested this on macOS. It's from the bevy setup page.
 

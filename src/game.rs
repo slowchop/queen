@@ -18,6 +18,7 @@ mod side_effects;
 mod time;
 mod ui;
 mod zones;
+mod skill;
 
 pub use plugin::GamePlugin;
 pub use plugin::InputSet;
