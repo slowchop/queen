@@ -3,6 +3,7 @@
 .netlify
 .idea
 release.zip
+/vendor
 
 # Krita backup files
 **/*~
