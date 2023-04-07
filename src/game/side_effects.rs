@@ -119,7 +119,7 @@ pub enum SideEffect {
     QueenEggRate(Multiplier),
     QueenHungerRate(Multiplier),
     AntHungerRate(Multiplier),
-    AntSpeed(Multiplier),
+    AntMovementSpeed(Multiplier),
     AntSquishRate(Multiplier),
 }
 
@@ -131,7 +131,7 @@ impl SideEffect {
             0 => Self::QueenEggRate(Multiplier::random()),
             1 => Self::QueenHungerRate(Multiplier::random()),
             2 => Self::AntHungerRate(Multiplier::random()),
-            3 => Self::AntSpeed(Multiplier::random()),
+            3 => Self::AntMovementSpeed(Multiplier::random()),
             4 => Self::AntSquishRate(Multiplier::random()),
             _ => unreachable!(),
         }
@@ -142,7 +142,7 @@ impl SideEffect {
             Self::QueenEggRate(multiplier) => 2f32 * multiplier.score(),
             Self::QueenHungerRate(multiplier) => -3f32 * multiplier.score(),
             Self::AntHungerRate(multiplier) => -3f32 * multiplier.score(),
-            Self::AntSpeed(multiplier) => 3f32 * multiplier.score(),
+            Self::AntMovementSpeed(multiplier) => 3f32 * multiplier.score(),
             Self::AntSquishRate(multiplier) => -2f32 * multiplier.score(),
         }
     }
@@ -175,7 +175,7 @@ impl SideEffect {
             Self::QueenEggRate(multiplier) => Some(multiplier),
             Self::QueenHungerRate(multiplier) => Some(multiplier),
             Self::AntHungerRate(multiplier) => Some(multiplier),
-            Self::AntSpeed(multiplier) => Some(multiplier),
+            Self::AntMovementSpeed(multiplier) => Some(multiplier),
             Self::AntSquishRate(multiplier) => Some(multiplier),
         }
     }
@@ -185,7 +185,7 @@ impl SideEffect {
             Self::QueenEggRate(multiplier) => Some(multiplier),
             Self::QueenHungerRate(multiplier) => Some(multiplier),
             Self::AntHungerRate(multiplier) => Some(multiplier),
-            Self::AntSpeed(multiplier) => Some(multiplier),
+            Self::AntMovementSpeed(multiplier) => Some(multiplier),
             Self::AntSquishRate(multiplier) => Some(multiplier),
         }
     }
@@ -198,7 +198,7 @@ impl SideEffect {
                 s.push_str("Ant Hunger ");
                 multiplier.short_name_mutate(&mut s);
             }
-            SideEffect::AntSpeed(multiplier) => {
+            SideEffect::AntMovementSpeed(multiplier) => {
                 s.push_str("Ant Movement ");
                 multiplier.short_name_mutate(&mut s);
             }

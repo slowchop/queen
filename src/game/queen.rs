@@ -55,8 +55,7 @@ pub fn grow_and_lay_eggs(
 pub fn update_queen_egg_progress_speed(
     mut query: Query<(&mut Queen, &CalculatedSideEffects)>,
 ) {
-    // const BASE_SPEED: f32 = 1f32 / 60f32 * 60f32;
-    const BASE_SPEED: f32 = 1f32 / 60f32 * 4f32;
+    const BASE_SPEED: f32 = 1f32 / 15f32;
     for ((mut queen, side_effects)) in query.iter_mut() {
         let speed = BASE_SPEED * side_effects.as_float(SideEffectDiscriminants::QueenEggRate);
         queen.egg_progress_speed = speed;

@@ -8,6 +8,7 @@ use bevy::utils::petgraph::algo::astar;
 use bevy::utils::petgraph::prelude::{EdgeRef, UnGraphMap};
 use bevy::utils::petgraph::visit::IntoEdgeReferences;
 use bevy_prototype_debug_lines::DebugLines;
+use crate::game::side_effects::{CalculatedSideEffects, SideEffectDiscriminants};
 
 #[derive(Debug, Resource, Default)]
 pub struct PathfindingLinesDebug(pub bool);
@@ -171,6 +172,15 @@ pub fn needs_path(
             warn!("No path found!");
             *path = Path::Failed(*goal);
         }
+    }
+}
+
+pub fn update_movement_speed(
+    mut query: Query<(&mut Speed, &CalculatedSideEffects)>,
+) {
+    const BASE_SPEED: f32 = 32f32;
+    for (mut speed, side_effects) in query.iter_mut() {
+        *speed = Speed::new(BASE_SPEED * side_effects.as_float(SideEffectDiscriminants::AntMovementSpeed));
     }
 }
 

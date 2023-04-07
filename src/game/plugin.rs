@@ -131,6 +131,7 @@ impl Plugin for GamePlugin {
                 game::pathfinding::show_debug_lines,
                 game::debug::check_for_f3_to_offer_queen_new_food,
                 game::food::feed_and_apply,
+                game::pathfinding::update_movement_speed,
         )
             .in_set(InputSet::Game),
         );

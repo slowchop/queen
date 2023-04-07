@@ -29,10 +29,6 @@ use crate::game::skill::SkillMode;
 #[derive(Clone, Component, Debug, ActionBuilder)]
 pub struct MoveToFoodAction;
 
-/// At should be at a food cell and will eat it.
-#[derive(Clone, Component, Debug, ActionBuilder)]
-pub struct EatAction;
-
 #[derive(Clone, Component, Debug, ScorerBuilder)]
 pub struct HungryScorer;
 
@@ -81,6 +77,20 @@ pub fn feed_queen_steps() -> StepsBuilder {
         .step(PathfindingAction)
         .step(FeedQueenAction)
 }
+
+/// At should be at a food cell and will eat it.
+#[derive(Clone, Component, Debug, ActionBuilder)]
+pub struct EatAction;
+
+pub fn eat_action(mut feed_writer: EventWriter<FeedEvent>, query: Query<(&Actor, &mut ActionState), With<EatAction>>) {
+    for (Actor(actor), mut state) in query.iter_mut() {
+        if *state != ActionState::Requested {
+            // TODO: Change it so the ant takes some time to eat.
+            continue;
+        }
+    }
+}
+
 
 /// Will attempt to place food at the destination.
 ///
@@ -328,7 +338,11 @@ pub fn offer_food_discovery_to_queen_action(
     mut ants: Query<(Entity, &Children), With<AntType>>,
     carrying_discovered_food: Query<&CarryingDiscoveredFood>,
     mut query: Query<(&Actor, &mut ActionState), With<OfferFoodDiscoveryToQueenAction>>,
+    queen: Query<Entity, With<Queen>>,
+    mut feed_writer: EventWriter<FeedEvent>,
 ) {
+    let queen_entity = queen.single();
+
     for ((Actor(actor), mut state)) in query.iter_mut() {
         let Ok((entity, children)) = ants.get_mut(*actor) else {
             warn!(?actor, "No children found.");
@@ -370,7 +384,13 @@ pub fn offer_food_discovery_to_queen_action(
                         // Add the food to the food state.
                         food_state.approve_food((*carrying).clone());
 
-                        // TODO: The queen eats the new food even if she is full.
+                        feed_writer.send(FeedEvent {
+                            target: queen_entity,
+                            carrying_food: CarryingFood {
+                                food_id: carrying.food_info.food_id,
+                                amount: 10f32,
+                            },
+                        });
 
                         done = true;
                     }
