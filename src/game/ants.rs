@@ -16,10 +16,12 @@ use crate::game::plugin::{Crawler, Speed, ANT_Z};
 use crate::game::positions::SideIPos;
 use crate::game::queen::EggLaidEvent;
 use crate::game::setup::{sprite, texture_atlas_sprite};
+use crate::game::side_effects::{
+    AppliedFoodSideEffect, AppliedFoodSideEffects, CalculatedSideEffects,
+};
 use bevy::prelude::*;
 use bevy::render::render_graph::NodeLabel::Name;
 use big_brain::prelude::*;
-use crate::game::side_effects::{AppliedFoodSideEffect, AppliedFoodSideEffects, CalculatedSideEffects};
 
 #[derive(Component, Debug, Eq, PartialEq, Default, Copy, Clone)]
 pub enum AntType {
@@ -132,7 +134,8 @@ pub fn spawn_ants(
             Hunger::default(),
             AssignedFoodId::default(),
             Path::None,
-            AppliedFoodSideEffects::new(), CalculatedSideEffects::new(),
+            AppliedFoodSideEffects::new(),
+            CalculatedSideEffects::new(),
         ));
     }
 }

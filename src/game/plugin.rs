@@ -158,6 +158,8 @@ impl Plugin for GamePlugin {
                 brains::place_food_if_possible_action,
                 brains::pick_up_food_action,
                 brains::feed_queen_action,
+                brains::eat_action,
+                brains::hungry_scorer,
             )
                 .in_set(BigBrainSet::Actions),
         );

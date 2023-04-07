@@ -7,7 +7,10 @@ use self::pathfinding::{
 };
 use crate::game::ants::AntType;
 use crate::game::brains::pathfinding::SetPathToStoredFoodAction;
-use crate::game::food::{AddFoodForAntToCarryEvent, AssignedFoodId, CarryingDiscoveredFood, CarryingFood, DiscoveredFood, FeedEvent, FoodState};
+use crate::game::food::{
+    AddFoodForAntToCarryEvent, AssignedFoodId, CarryingDiscoveredFood, CarryingFood,
+    DiscoveredFood, FeedEvent, FoodState, DEFAULT_CARGO_CAPACITY,
+};
 use crate::game::food_types::{FoodId, FoodType};
 use crate::game::hunger::Hunger;
 use crate::game::map::{ExitPositions, SideMapPosToEntities, UpdateFoodRenderingEvent};
@@ -15,22 +18,17 @@ use crate::game::pathfinding::Path;
 use crate::game::plugin::{PlayerState, QueensChoice};
 use crate::game::positions::SideIPos;
 use crate::game::queen::Queen;
+use crate::game::skill::SkillMode;
 use crate::game::time::GameTime;
 use bevy::prelude::*;
-use bevy_egui::egui::Align2;
-use bevy_egui::{egui, EguiContexts};
 use big_brain::actions::StepsBuilder;
 use big_brain::prelude::*;
 use rand::prelude::SliceRandom;
 use std::time::Duration;
-use crate::game::skill::SkillMode;
 
 /// When hungry or needs food for the queen, move to some food.
 #[derive(Clone, Component, Debug, ActionBuilder)]
 pub struct MoveToFoodAction;
-
-#[derive(Clone, Component, Debug, ScorerBuilder)]
-pub struct HungryScorer;
 
 pub fn eat_food() -> StepsBuilder {
     // TODO: expand this
@@ -79,18 +77,65 @@ pub fn feed_queen_steps() -> StepsBuilder {
 }
 
 /// At should be at a food cell and will eat it.
-#[derive(Clone, Component, Debug, ActionBuilder)]
-pub struct EatAction;
+#[derive(Clone, Component, Debug, ActionBuilder, Default)]
+pub struct EatAction {
+    finish_eating_at: Duration,
+}
 
-pub fn eat_action(mut feed_writer: EventWriter<FeedEvent>, query: Query<(&Actor, &mut ActionState), With<EatAction>>) {
-    for (Actor(actor), mut state) in query.iter_mut() {
+pub fn eat_action(
+    time: Res<GameTime>,
+    mut food_state: ResMut<FoodState>,
+    mut feed_writer: EventWriter<FeedEvent>,
+    ants: Query<&Transform>,
+    mut query: Query<(&Actor, &mut ActionState, &mut EatAction)>,
+    mut update_food_rendering_writer: EventWriter<UpdateFoodRenderingEvent>,
+) {
+    for (Actor(entity), mut state, mut eat_action) in query.iter_mut() {
         if *state != ActionState::Requested {
             // TODO: Change it so the ant takes some time to eat.
             continue;
         }
+
+        match *state {
+            ActionState::Requested => {
+                let Ok(transform) = ants.get(*entity) else {
+                    warn!("Ant has no transform in eat_action");
+                    *state = ActionState::Failure;
+                    continue;
+                };
+
+                let pos = SideIPos::from(transform);
+
+                let Some(carrying_food) = food_state.take_food_from_position(pos, 1f32) else {
+                    warn!("Tried to eat food but there was none.");
+                    *state = ActionState::Failure;
+                    continue;
+                };
+
+                info!(?carrying_food, "Eating food");
+
+                eat_action.finish_eating_at = time.since_startup() + Duration::from_secs(5);
+
+                feed_writer.send(FeedEvent {
+                    target: *entity,
+                    carrying_food,
+                });
+                *state = ActionState::Executing;
+
+                update_food_rendering_writer.send(UpdateFoodRenderingEvent(pos));
+            }
+            ActionState::Executing => {
+                if time.since_startup() >= eat_action.finish_eating_at {
+                    *state = ActionState::Success;
+                }
+            }
+            ActionState::Cancelled => {
+                *state = ActionState::Failure;
+            }
+            _ => {}
+        }
     }
 }
-
 
 /// Will attempt to place food at the destination.
 ///
@@ -246,6 +291,9 @@ pub fn outside_map_discovering_food_action(
 
                 *state = ActionState::Success;
             }
+            ActionState::Cancelled => {
+                *state = ActionState::Failure;
+            }
             _ => {}
         }
     }
@@ -309,6 +357,9 @@ pub fn outside_map_gathering_existing_food_action(
                 **assigned_food_id = None;
 
                 *state = ActionState::Success;
+            }
+            ActionState::Cancelled => {
+                *state = ActionState::Failure;
             }
             _ => {}
         }
@@ -408,6 +459,10 @@ pub fn offer_food_discovery_to_queen_action(
                     *state = ActionState::Success;
                 }
             }
+            ActionState::Cancelled => {
+                // *state = ActionState::Failure;
+                todo!();
+            }
             _ => {}
         }
     }
@@ -423,6 +478,10 @@ pub fn pick_up_food_action(
     mut carry_food_writer: EventWriter<AddFoodForAntToCarryEvent>,
 ) {
     for ((Actor(actor), mut state)) in query.iter_mut() {
+        if *state != ActionState::Requested {
+            continue;
+        }
+
         let Ok((entity, transform)) = ants.get_mut(*actor) else {
             warn!(?actor, ">>>>>>>>>>> No children found.");
             *state = ActionState::Failure;
@@ -432,7 +491,7 @@ pub fn pick_up_food_action(
         let pos = SideIPos::from(transform);
 
         // Make sure there's still food here.
-        let Some(carrying_food) = food_state.take_food_from_position(pos) else {
+        let Some(carrying_food) = food_state.take_food_from_position(pos, DEFAULT_CARGO_CAPACITY) else {
             warn!(">>>>>>>>> No food left at {:?}", pos);
             *state = ActionState::Failure;
             continue;
@@ -490,5 +549,19 @@ pub fn feed_queen_action(
         });
 
         *state = ActionState::Success;
+    }
+}
+
+#[derive(Clone, Component, Debug, ScorerBuilder)]
+pub struct HungryScorer;
+
+pub fn hungry_scorer(
+    hungers: Query<&Hunger>,
+    mut query: Query<(&Actor, &mut Score), With<HungryScorer>>,
+) {
+    for (Actor(actor), mut score) in query.iter_mut() {
+        if let Ok(hunger) = hungers.get(*actor) {
+            score.set(hunger.hunger_score());
+        }
     }
 }

@@ -1,18 +1,19 @@
 use crate::game::food_types::FoodId;
+use crate::game::hunger::Hunger;
 use crate::game::positions::SideIPos;
+use crate::game::queen::Queen;
 use crate::game::setup::queen_start;
+use crate::game::side_effects::{AppliedFoodSideEffects, SideEffect};
+use crate::game::time::GameTime;
 use crate::game::zones::FoodStorageZones;
 use bevy::prelude::*;
 use bevy::utils::{HashMap, HashSet};
 use rand::{random, Rng};
 use std::time::Duration;
-use crate::game::hunger::Hunger;
-use crate::game::queen::Queen;
-use crate::game::side_effects::{AppliedFoodSideEffects, SideEffect};
-use crate::game::time::GameTime;
 
 pub const DEFAULT_CARGO_CAPACITY: f32 = 10f32;
 
+#[derive(Debug)]
 pub struct FeedEvent {
     pub target: Entity,
     pub carrying_food: CarryingFood,
@@ -120,7 +121,9 @@ pub struct FoodState {
 
 impl FoodState {
     pub fn get_discovered_food(&self, food_id: FoodId) -> Option<&DiscoveredFood> {
-        self.approved.iter().find(|f| f.food_info.food_id == food_id)
+        self.approved
+            .iter()
+            .find(|f| f.food_info.food_id == food_id)
     }
 
     /// This won't fail. It will always pick some spot.
@@ -192,7 +195,10 @@ impl FoodState {
 
     /// Return None if food has run out or not found.
     pub fn take_food_from_discovered_source(&mut self, food_id: &FoodId) -> Option<CarryingFood> {
-        let mut food = self.approved.iter_mut().find(|f| f.food_info.food_id == *food_id)?;
+        let mut food = self
+            .approved
+            .iter_mut()
+            .find(|f| f.food_info.food_id == *food_id)?;
 
         if food.stash_remaining <= 0f32 {
             return None;
@@ -217,14 +223,20 @@ impl FoodState {
         food_cell.add(food);
     }
 
-    pub fn take_food_from_position(&mut self, position: SideIPos) -> Option<CarryingFood> {
+    pub fn take_food_from_position(
+        &mut self,
+        position: SideIPos,
+        maximum_food: f32,
+    ) -> Option<CarryingFood> {
         let food_cell = self.food_position_cells.get_mut(&position)?;
         if food_cell.is_empty() {
             error!("Food cell shouldn't be empty 1!");
             return None;
         }
 
-        let maybe_carrying_food = food_cell.take_any_food_up_to_max_amount(DEFAULT_CARGO_CAPACITY);
+        info!("There was {:?} food in the cell", food_cell);
+
+        let maybe_carrying_food = food_cell.take_any_food_up_to_max_amount(maximum_food);
         if maybe_carrying_food.is_none() {
             error!("Food cell shouldn't be empty 2!");
             return None;
@@ -234,6 +246,11 @@ impl FoodState {
             info!("cell is now empty");
             self.food_position_cells.remove(&position);
         }
+
+        info!(
+            "There is still {:?} food in the cell",
+            self.food_position_cells.get(&position)
+        );
 
         maybe_carrying_food
     }
@@ -247,7 +264,7 @@ impl FoodState {
 }
 
 /// A container for all the food stored in a cell.
-#[derive(Deref, DerefMut, Default)]
+#[derive(Deref, DerefMut, Default, Debug)]
 pub struct FoodCell(HashMap<FoodId, f32>);
 
 impl FoodCell {
@@ -322,16 +339,19 @@ pub fn feed_and_apply(
 ) {
     for event in feed_reader.iter() {
         for (mut hunger, mut applied) in query.iter_mut() {
+            info!("Feeding {event:?} with {hunger:?} and {applied:?}");
             hunger.feed(event.carrying_food.amount);
 
             let carrying_food = &event.carrying_food;
             let Some(discovered_food) = food_state.get_discovered_food(carrying_food.food_id) else {
-                error!("Food not found!");
+                error!("Food type not found in discovered food!");
                 continue;
             };
 
-            applied.add_or_update(discovered_food.food_info.clone(), time.since_startup() + Duration::from_secs(5 * 60));
+            applied.add_or_update(
+                discovered_food.food_info.clone(),
+                time.since_startup() + Duration::from_secs(5 * 60),
+            );
         }
     }
 }
-

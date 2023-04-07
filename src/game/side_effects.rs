@@ -39,7 +39,7 @@ pub struct AppliedFoodSideEffect {
 }
 
 /// All the side effects applied.
-#[derive(Component, Deref, DerefMut)]
+#[derive(Component, Deref, DerefMut, Debug)]
 pub struct AppliedFoodSideEffects(Vec<AppliedFoodSideEffect>);
 
 impl AppliedFoodSideEffects {

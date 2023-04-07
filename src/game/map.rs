@@ -259,21 +259,24 @@ pub fn update_food_tile_rendering(
         };
 
         // Remove the child cells because we might re-add them.
+        info!("Removing child food cells");
         if let Some(child_food_cell) = maybe_children {
+            info!("Removing child food cells 1");
             for child in child_food_cell.iter() {
+                info!("Removing child food cells 2");
                 if let Ok(_) = child_food_cells.get(*child) {
+                    info!("Removing child food cells 3");
                     commands.entity(*child).despawn_recursive();
                 }
             }
         }
 
         let Some(food_cell) = food_state.info_at_position(pos) else {
+            info!("No food cell at {:?}", pos);
             continue;
         };
 
-        println!("Adding child food cell");
-        // TODO: This is executing but the food isn't visible for some reason.
-        // XXX: ???
+        info!("Adding child food cell");
 
         let child = commands
             .spawn(SpriteBundle {

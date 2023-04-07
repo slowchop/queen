@@ -1,11 +1,11 @@
 use crate::game::time::GameTime;
 use bevy::prelude::{Component, Query, Res};
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct Hunger {
-    current: f32,
-    hungry_at: f32,
-    starving_at: f32,
+    pub current: f32,
+    pub hungry_at: f32,
+    pub starving_at: f32,
 }
 
 impl Hunger {
@@ -30,6 +30,11 @@ impl Hunger {
 
     pub fn hunger_fraction(&self) -> f32 {
         self.current / self.hungry_at
+    }
+
+    /// 0 - 1
+    pub fn hunger_score(&self) -> f32 {
+        self.hunger_fraction().min(1f32).max(0f32)
     }
 }
 

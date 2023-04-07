@@ -1,7 +1,8 @@
+use std::time::Duration;
 use crate::game::animation::{AnimationIndices, AnimationTimer};
 use crate::game::camera::CameraFocus;
 use crate::game::eggs::Egg;
-use crate::game::food::{CarryingFood, FoodState};
+use crate::game::food::{CarryingFood, DiscoveredFood, FoodState};
 use crate::game::food_types::{FoodId, FoodType};
 use crate::game::hunger::Hunger;
 use crate::game::map::{
@@ -24,6 +25,7 @@ use bevy_prototype_debug_lines::DebugLines;
 use pathfinding::num_traits::Signed;
 use rand::random;
 use crate::game::side_effects::{AppliedFoodSideEffect, AppliedFoodSideEffects, CalculatedSideEffects};
+use crate::game::skill::SkillMode;
 
 // pub fn queen_start() -> SideIPos {
 //     SideIPos::new(0, -20)
@@ -52,8 +54,10 @@ pub fn setup_map(
     asset_server: Res<AssetServer>,
     mut debug_lines: ResMut<DebugLines>,
 
+
     // TODO: Temporary...
     mut food_state: ResMut<FoodState>,
+    skill_mode: Res<SkillMode>,
     // TODO: Temporary...
     mut add_zone_writer: EventWriter<AddFoodZoneEvent>,
 
@@ -66,17 +70,25 @@ pub fn setup_map(
     add_zone_writer.send(AddFoodZoneEvent(SideIPos::new(8, -20)));
 
     // XXX: Temporary...
-    // {
-    //     let side_pos = SideIPos::new(10, -10);
-    //     update_food_rendering_writer.send(UpdateFoodRenderingEvent(side_pos));
-    //     food_state.add_food_at_position(
-    //         side_pos,
-    //         &CarryingFood {
-    //             food_id: FoodId::random(),
-    //             amount: 5,
-    //         },
-    //     )
-    // }
+    {
+        let food_info = skill_mode.next_food(Duration::ZERO);
+        food_state.approve_food(DiscoveredFood {
+            food_info: food_info.clone(),
+            position: SideIPos::new(0, 0),
+            time_to_discover: Default::default(),
+            stash_remaining: 0.0,
+        });
+
+        let side_pos = SideIPos::new(5, -20);
+        update_food_rendering_writer.send(UpdateFoodRenderingEvent(side_pos));
+        food_state.add_food_at_position(
+            side_pos,
+            &CarryingFood {
+                food_id: food_info.food_id,
+                amount: 5f32,
+            },
+        )
+    }
 
     let mut side_map_pos_to_entities = HashMap::with_capacity(1_000);
 
