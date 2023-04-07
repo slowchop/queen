@@ -19,6 +19,10 @@ pub struct GameTime {
 }
 
 impl GameTime {
+    pub fn since_startup(&self) -> Duration {
+        self.since_startup
+    }
+
     pub fn delta(&self) -> Duration {
         self.delta
     }

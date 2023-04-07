@@ -5,6 +5,7 @@ use crate::game::plugin::PlayerState;
 use crate::game::positions::SideIPos;
 use crate::game::time::GameTime;
 use bevy::prelude::*;
+use crate::game::side_effects::{AppliedSideEffects, CalculatedSideEffects, SideEffectDiscriminants};
 
 #[derive(Debug)]
 pub struct EggLaidEvent {
@@ -47,5 +48,17 @@ pub fn grow_and_lay_eggs(
                 position: pos,
             });
         }
+    }
+}
+
+pub fn update_queen_egg_progress_speed(
+    mut query: Query<(&mut Queen, &CalculatedSideEffects)>,
+) {
+    for ((mut queen, side_effects)) in query.iter_mut() {
+        let mut speed = 0.1f32;
+
+        speed *= side_effects.as_float(SideEffectDiscriminants::QueenEggRate);
+
+        todo!()
     }
 }

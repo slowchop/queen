@@ -16,7 +16,7 @@ pub struct AddFoodForAntToCarryEvent {
     pub data: CarryFoodType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub struct FoodInfo {
     pub food_id: FoodId,
     pub side_effects: Vec<SideEffect>,

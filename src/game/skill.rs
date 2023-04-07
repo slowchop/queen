@@ -1,7 +1,7 @@
 use std::time::Duration;
 use crate::game::food::FoodInfo;
 use crate::game::food_types::FoodId;
-use crate::game::side_effects::SideEffect;
+use crate::game::side_effects::{SideEffect, SideEffectDiscriminants};
 
 pub enum SkillMode {
     Career,
@@ -15,8 +15,14 @@ impl SkillMode {
         for _ in 0..count {
             let effect = SideEffect::random();
 
+            // First one must be negative.
+            if effects.is_empty() && effect.score() > 0f32 {
+                return None;
+            }
+
             // Make sure the effect is unique.
-            if effects.iter().any(|e: &SideEffect| e.unique_id() == effect.unique_id()) {
+            let discriminant: SideEffectDiscriminants = effect.into();
+            if effects.iter().any(|e| Into::<SideEffectDiscriminants>::into(e) == discriminant) {
                 return None;
             }
 
@@ -25,15 +31,15 @@ impl SkillMode {
         Some(effects)
     }
 
-    pub fn generate_side_effects_for_score(count: usize, score: i32) -> Vec<SideEffect> {
-        let mut range = 0;
+    pub fn generate_side_effects_for_score(count: usize, score: f32) -> Vec<SideEffect> {
+        let mut range = 0f32;
         loop {
-            // Try 10 times to match score within range.
-            for _ in 0..10 {
-                let Some(effects) = Self::try_random_unique_side_effects(2) else {
+            // Try a few times to match score within range.
+            for _ in 0..2 {
+                let Some(effects) = Self::try_random_unique_side_effects(count) else {
                     continue;
                 };
-                let total_score = effects.iter().map(|effect| effect.score()).sum::<i32>();
+                let total_score = effects.iter().map(|effect| effect.score()).sum::<f32>();
                 let range = (score - range)..=(score + range);
                 if range.contains(&total_score) {
                     return effects;
@@ -41,7 +47,7 @@ impl SkillMode {
             }
 
             // If a score can't be found within the range, expand the range slightly.
-            range += 1;
+            range += 1f32;
         }
     }
 
@@ -67,13 +73,11 @@ impl SkillMode {
             }
         };
 
-        let expected_score = expected_score as i32;
-
         let food_id = FoodId::random();
-        let mut side_effects = Self::generate_side_effects_for_score(4, expected_score);
+        let mut side_effects = Self::generate_side_effects_for_score(2, expected_score);
 
         // Sort by score.
-        side_effects.sort_by(|a, b| b.score().cmp(&a.score()));
+        side_effects.sort_by(|a, b| a.score().partial_cmp(&b.score()).unwrap());
 
         FoodInfo {
             food_id,

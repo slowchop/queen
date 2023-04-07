@@ -23,40 +23,164 @@
 //!
 //! Higher score the better for the player.
 //!
-use strum::{EnumCount, FromRepr};
+use std::hash::{Hash, Hasher};
+use std::time::Duration;
+use bevy::prelude::*;
+use bevy::utils::{HashMap, HashSet};
+use strum::{EnumCount, EnumDiscriminants};
+use crate::game::food::FoodInfo;
+use crate::game::time::GameTime;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumCount)]
+/// A side effect applied to an entity. One per food. The component is [AppliedSideEffects].
+#[derive(Debug, Clone, PartialEq, Hash)]
+pub struct AppliedSideEffect {
+    pub food: FoodInfo,
+    pub timeout: Duration,
+}
+
+/// All the side effects applied.
+#[derive(Component, Deref, DerefMut)]
+pub struct AppliedSideEffects(Vec<AppliedSideEffect>);
+
+impl AppliedSideEffects {
+    pub fn add_or_update(&mut self, food: FoodInfo, timeout: Duration) {
+        if let Some(existing) = self.0.iter_mut().find(|existing| existing.food == food) {
+            existing.timeout = timeout;
+        } else {
+            self.0.push(AppliedSideEffect { food, timeout });
+        }
+    }
+
+    pub fn remove_expired(&mut self, time: &Duration) {
+        self.0.retain(|existing| existing.timeout > *time);
+    }
+
+    /// Work out the total multipliers for each side effect.
+    pub fn calculate_totals(&self) -> CalculatedSideEffects {
+        let mut calculated_side_effects = CalculatedSideEffects::new();
+        for applied_side_effect in self.0.iter() {
+            for side_effect in &applied_side_effect.food.side_effects{
+                calculated_side_effects.apply(side_effect);
+            }
+        };
+        calculated_side_effects
+    }
+}
+
+/// The total side effects combined for this entity.
+#[derive(Component)]
+pub struct CalculatedSideEffects(HashMap<SideEffectDiscriminants, SideEffect>);
+
+impl CalculatedSideEffects {
+    pub fn new() -> Self {
+        Self(HashMap::new())
+    }
+
+    pub fn apply(&mut self, side_effect: &SideEffect) {
+        let discriminant: SideEffectDiscriminants = side_effect.into();
+        match self.0.get_mut(&discriminant) {
+            Some(existing) => {
+                existing.apply_or_panic(side_effect);
+            }
+            None => {
+                self.0.insert(discriminant, side_effect.clone());
+            }
+        }
+    }
+
+    pub fn as_float(&self, side_effect: SideEffectDiscriminants) -> f32 {
+        self.0.get(&side_effect).map(|effect| effect.as_float()).unwrap_or(1f32)
+    }
+}
+
+pub fn calculate_total_side_effects(side_effects_applied: &AppliedSideEffects, calculated_side_effects: &mut CalculatedSideEffects) {
+    *calculated_side_effects = side_effects_applied.calculate_totals()
+}
+
+pub fn remove_expired_side_effects(
+    time: Res<GameTime>,
+    mut applied_side_effects: Query<&mut AppliedSideEffects>,
+) {
+    let time = time.since_startup();
+    for mut applied in applied_side_effects.iter_mut() {
+        applied.remove_expired(&time);
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Hash, EnumCount, EnumDiscriminants)]
+#[strum_discriminants(derive(Hash))]
 pub enum SideEffect {
-    NewAnts(AntEffectType),
-    AllAnts(AntEffectType),
-    Queen(QueenEffectType),
+    QueenEggRate(Multiplier),
+    QueenHungerRate(Multiplier),
+    AntHungerRate(Multiplier),
+    AntSpeed(Multiplier),
+    AntSquishRate(Multiplier),
 }
 
 impl SideEffect {
-    /// Would be cool if some foods gave specific effects.
+    /// Would be cool if certain foods or flavours gave specific effects.
     pub fn random() -> Self {
         let random = rand::random::<u32>() % SideEffect::COUNT as u32;
         match random {
-            0 => Self::NewAnts(AntEffectType::random()),
-            1 => Self::AllAnts(AntEffectType::random()),
-            2 => Self::Queen(QueenEffectType::random()),
+            0 => Self::QueenEggRate(Multiplier::random()),
+            1 => Self::QueenHungerRate(Multiplier::random()),
+            2 => Self::AntHungerRate(Multiplier::random()),
+            3 => Self::AntSpeed(Multiplier::random()),
+            4 => Self::AntSquishRate(Multiplier::random()),
             _ => unreachable!(),
         }
     }
 
-    pub fn score(&self) -> i32 {
+    pub fn score(&self) -> f32 {
         match self {
-            Self::NewAnts(effect) => effect.score(),
-            Self::AllAnts(effect) => effect.score(),
-            Self::Queen(effect) => effect.score(),
+            Self::QueenEggRate(multiplier) => 2f32 * multiplier.score(),
+            Self::QueenHungerRate(multiplier) => -3f32 * multiplier.score(),
+            Self::AntHungerRate(multiplier) => -3f32 * multiplier.score(),
+            Self::AntSpeed(multiplier) => 3f32 * multiplier.score(),
+            Self::AntSquishRate(multiplier) => -2f32 * multiplier.score(),
         }
     }
 
-    pub fn unique_id(&self) -> String {
+    pub fn as_float(&self) -> f32 {
+        let maybe_multiplier = self.get_multiplier();
+        let multiplier = maybe_multiplier.as_ref().unwrap();
+        multiplier.as_float()
+    }
+
+    /// Will multiply with another side effect of the same type.
+    pub fn apply_or_panic(&mut self, other: &SideEffect) {
+        let this_discriminant: SideEffectDiscriminants = (*self).into();
+        let other_discriminant: SideEffectDiscriminants = other.into();
+        debug_assert_eq!(this_discriminant, other_discriminant);
+
+        let Some(this_multiplier) = self.get_mut_multiplier() else {
+            todo!("Something isn't am multiplier");
+        };
+
+        let Some(other_multiplier) = other.get_multiplier() else {
+            todo!("Other isn't am multiplier");
+        };
+
+        this_multiplier.apply(other_multiplier);
+    }
+
+    pub fn get_multiplier(&self) -> Option<&Multiplier> {
         match self {
-            Self::NewAnts(effect) => effect.unique_id_without_multiplier(),
-            Self::AllAnts(effect) => effect.unique_id_without_multiplier(),
-            Self::Queen(effect) => effect.unique_id_without_multiplier(),
+            Self::QueenEggRate(multiplier) => Some(multiplier),
+            Self::QueenHungerRate(multiplier) => Some(multiplier),
+            Self::AntHungerRate(multiplier) => Some(multiplier),
+            Self::AntSpeed(multiplier) => Some(multiplier),
+            Self::AntSquishRate(multiplier) => Some(multiplier),
+        }
+    }
+
+    pub fn get_mut_multiplier(&mut self) -> Option<&mut Multiplier> {
+        match self {
+            Self::QueenEggRate(multiplier) => Some(multiplier),
+            Self::QueenHungerRate(multiplier) => Some(multiplier),
+            Self::AntHungerRate(multiplier) => Some(multiplier),
+            Self::AntSpeed(multiplier) => Some(multiplier),
+            Self::AntSquishRate(multiplier) => Some(multiplier),
         }
     }
 
@@ -64,17 +188,25 @@ impl SideEffect {
         let mut s = String::new();
 
         match self {
-            SideEffect::NewAnts(effect_type) => {
-                s.push_str("New: ");
-                effect_type.short_name_mutate(&mut s);
+            SideEffect::AntHungerRate(multiplier) => {
+                s.push_str("Ant Hunger ");
+                multiplier.short_name_mutate(&mut s);
             }
-            SideEffect::AllAnts(effect_type) => {
-                s.push_str("All: ");
-                effect_type.short_name_mutate(&mut s);
+            SideEffect::AntSpeed(multiplier) => {
+                s.push_str("Ant Speed ");
+                multiplier.short_name_mutate(&mut s);
             }
-            SideEffect::Queen(effect_type) => {
-                s.push_str("Queen: ");
-                effect_type.short_name_mutate(&mut s);
+            SideEffect::AntSquishRate(multiplier) => {
+                s.push_str("Ant Squish ");
+                multiplier.short_name_mutate(&mut s);
+            }
+            SideEffect::QueenEggRate(multiplier) => {
+                s.push_str("Queen Egg ");
+                multiplier.short_name_mutate(&mut s);
+            }
+            SideEffect::QueenHungerRate(multiplier) => {
+                s.push_str("Queen Hunger ");
+                multiplier.short_name_mutate(&mut s);
             }
         }
 
@@ -82,123 +214,34 @@ impl SideEffect {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumCount)]
-pub enum QueenEffectType {
-    HatchRate(Multiplier),
-    HungerRate(Multiplier),
-}
-
-impl QueenEffectType {
-    pub fn random() -> Self {
-        let random = rand::random::<u32>() % QueenEffectType::COUNT as u32;
-        match random {
-            0 => Self::HatchRate(Multiplier::random()),
-            1 => Self::HungerRate(Multiplier::random()),
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn unique_id_without_multiplier(&self) -> String {
-        match self {
-            Self::HatchRate(_) => format!("QueenHatchRate"),
-            Self::HungerRate(_) => format!("QueenHungerRate"),
-        }
-    }
-
-    pub fn score(&self) -> i32 {
-        match self {
-            Self::HatchRate(multiplier) => 2 * multiplier.score(),
-            Self::HungerRate(multiplier) => -3 * multiplier.score(),
-        }
-    }
-
-    pub fn short_name_mutate(&self, mut s: &mut String) {
-        let multiplier = match self {
-            Self::HatchRate(multiplier) => {
-                s.push_str("Hatch Rate ");
-                multiplier
-            }
-            Self::HungerRate(multiplier) => {
-                s.push_str("Hunger Rate ");
-                multiplier
-            }
-        };
-
-        multiplier.short_name_mutate(&mut s);
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumCount)]
-pub enum AntEffectType {
-    HungerRate(Multiplier),
-    WalkSpeed(Multiplier),
-    SquishRate(Multiplier),
-}
-
-impl AntEffectType {
-    pub fn score(&self) -> i32 {
-        match self {
-            Self::HungerRate(multiplier) => -3 * multiplier.score(),
-            Self::WalkSpeed(multiplier) => 3 * multiplier.score(),
-            Self::SquishRate(multiplier) => -2 * multiplier.score(),
-        }
-    }
-
-    pub fn random() -> Self {
-        let random = rand::random::<usize>() % Self::COUNT;
-        match random {
-            0 => Self::HungerRate(Multiplier::random()),
-            1 => Self::WalkSpeed(Multiplier::random()),
-            2 => Self::SquishRate(Multiplier::random()),
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn unique_id_without_multiplier(&self) -> String {
-        match self {
-            Self::HungerRate(_) => format!("AntHungerRate"),
-            Self::WalkSpeed(_) => format!("AntWalkSpeed"),
-            Self::SquishRate(_) => format!("AntSquishRate"),
-        }
-    }
-
-    pub fn short_name(&self) -> String {
-        let mut s = String::new();
-        self.short_name_mutate(&mut s);
-        s
-    }
-
-    pub fn short_name_mutate(&self, mut s: &mut String) {
-        let multiplier = match self {
-            Self::WalkSpeed(multiplier) => {
-                s.push_str("Walk ");
-                multiplier
-            }
-            Self::SquishRate(multiplier) => {
-                s.push_str("Squish ");
-                multiplier
-            }
-            AntEffectType::HungerRate(multiplier) => {
-                s.push_str("Hunger ");
-                multiplier
-            }
-        };
-
-        multiplier.short_name_mutate(&mut s);
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Multiplier {
-    IncreaseBy(u8),
-    DecreaseBy(u8),
+    IncreaseBy(f32),
+    DecreaseBy(f32),
+}
+
+impl Hash for Multiplier {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Self::IncreaseBy(value) => {
+                0u8.hash(state);
+                value.to_bits().hash(state);
+            }
+            Self::DecreaseBy(value) => {
+                1u8.hash(state);
+                value.to_bits().hash(state);
+            }
+        }
+    }
 }
 
 impl Multiplier {
-    /// Increase or decrease by range 2x, 3x, 4x, 5x
     pub fn random() -> Self {
         let random = rand::random::<u32>() % 2;
-        let amount = (rand::random::<u32>() % 4 + 2) as u8;
+        let possible = [2f32, 3f32];
+        let random_index = rand::random::<usize>() % possible.len();
+        let amount = possible[random_index];
+
         match random {
             0 => Self::IncreaseBy(amount),
             1 => Self::DecreaseBy(amount),
@@ -206,11 +249,30 @@ impl Multiplier {
         }
     }
 
-    pub fn score(&self) -> i32 {
-        match self {
-            Self::IncreaseBy(amount) => *amount as i32,
-            Self::DecreaseBy(amount) => -(*amount as i32),
+    pub fn from_float(value: f32) -> Self {
+        if value > 1f32 {
+            Self::IncreaseBy(value)
+        } else {
+            Self::DecreaseBy(1f32 / value)
         }
+    }
+
+    pub fn as_float(&self) -> f32 {
+        match self {
+            Self::IncreaseBy(amount) => *amount as f32,
+            Self::DecreaseBy(amount) => 1f32 / *amount as f32,
+        }
+    }
+
+    pub fn apply(&mut self, other: &Self) {
+        let this_float = self.as_float();
+        let other_float = other.as_float();
+        let new_float = this_float * other_float;
+        *self = Self::from_float(new_float);
+    }
+
+    pub fn score(&self) -> f32 {
+        self.as_float()
     }
 
     pub fn short_name(&self) -> String {
