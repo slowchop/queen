@@ -83,7 +83,7 @@ pub fn control(
 }
 
 pub fn show_queens_choice(mut contexts: EguiContexts, mut player_state: ResMut<PlayerState>) {
-    let QueensChoice::Undecided(food_info) =  player_state.queens_choice else {
+    let QueensChoice::Undecided(food_info) =  player_state.queens_choice.clone() else {
         return;
     };
 
@@ -91,12 +91,12 @@ pub fn show_queens_choice(mut contexts: EguiContexts, mut player_state: ResMut<P
         .anchor(Align2::CENTER_CENTER, egui::Vec2::ZERO)
         .show(&contexts.ctx_mut(), |ui| {
             ui.heading("This scout has found new food!");
-            ui.label(format!("Food Type: {}", food_info));
-            ui.heading("This is fake info for now (:");
-            ui.label(" + The Queen grows eggs 2x faster.");
-            ui.label(" - The Queen needs 3x as much food.");
-            ui.label(" + New ants walk 3x faster");
-            ui.label(" - Ants eat 2x slower");
+            ui.label(format!("Food Type: {}", food_info.food_id));
+
+            for side_effect in &food_info.side_effects {
+                ui.label(side_effect.short_name());
+            }
+
             ui.label("Do you want to add this food to the colony?");
             ui.horizontal(|ui| {
                 if ui.button("Yes").clicked() {

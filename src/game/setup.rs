@@ -23,6 +23,7 @@ use bevy::utils::HashMap;
 use bevy_prototype_debug_lines::DebugLines;
 use pathfinding::num_traits::Signed;
 use rand::random;
+use crate::game::side_effects::{AppliedFoodSideEffect, AppliedFoodSideEffects, CalculatedSideEffects};
 
 // pub fn queen_start() -> SideIPos {
 //     SideIPos::new(0, -20)
@@ -38,6 +39,7 @@ pub fn sprite() -> Sprite {
         ..Default::default()
     }
 }
+
 pub fn texture_atlas_sprite() -> TextureAtlasSprite {
     TextureAtlasSprite {
         anchor: Anchor::BottomLeft,
@@ -229,7 +231,7 @@ pub fn setup_queen(mut commands: Commands, asset_server: Res<AssetServer>) {
         transform,
         ..Default::default()
     };
-    commands.spawn((sprite_bundle, Queen::default(), Hunger::default()));
+    commands.spawn((sprite_bundle, Queen::default(), Hunger::default(), AppliedFoodSideEffects::new(), CalculatedSideEffects::new()));
 }
 
 // pub fn setup_test_eggs(

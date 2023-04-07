@@ -7,10 +7,7 @@ use self::pathfinding::{
 };
 use crate::game::ants::AntType;
 use crate::game::brains::pathfinding::SetPathToStoredFoodAction;
-use crate::game::food::{
-    AddFoodForAntToCarryEvent, AssignedFoodId, CarryingDiscoveredFood, CarryingFood,
-    DiscoveredFood, FoodState,
-};
+use crate::game::food::{AddFoodForAntToCarryEvent, AssignedFoodId, CarryingDiscoveredFood, CarryingFood, DiscoveredFood, FeedEvent, FoodState};
 use crate::game::food_types::{FoodId, FoodType};
 use crate::game::hunger::Hunger;
 use crate::game::map::{ExitPositions, SideMapPosToEntities, UpdateFoodRenderingEvent};
@@ -26,6 +23,7 @@ use big_brain::actions::StepsBuilder;
 use big_brain::prelude::*;
 use rand::prelude::SliceRandom;
 use std::time::Duration;
+use crate::game::skill::SkillMode;
 
 /// When hungry or needs food for the queen, move to some food.
 #[derive(Clone, Component, Debug, ActionBuilder)]
@@ -193,6 +191,7 @@ pub struct OutsideMapDiscoveringNewFoodAction {
 
 pub fn outside_map_discovering_food_action(
     time: Res<GameTime>,
+    skill_mode: Res<SkillMode>,
     mut food_state: ResMut<FoodState>,
     mut ants: Query<(Entity, &Transform)>,
     mut query: Query<(
@@ -222,16 +221,16 @@ pub fn outside_map_discovering_food_action(
                     continue;
                 }
 
-                let food_id = food_state.discover_food();
+                let food_info = skill_mode.next_food(time.since_startup());
 
                 // Give the ant some food to carry.
                 carry_food_writer.send(AddFoodForAntToCarryEvent::discovered(
                     entity,
                     DiscoveredFood {
-                        food_id,
+                        food_info,
                         position: SideIPos::from(transform),
                         time_to_discover: action.initial_time,
-                        stash_remaining: 1000,
+                        stash_remaining: 1000f32,
                     },
                 ));
 
@@ -346,7 +345,7 @@ pub fn offer_food_discovery_to_queen_action(
             };
             food_info = Some((child, f.clone()));
         }
-        let Some((child_food_entity, food_info)) = food_info else {
+        let Some((child_food_entity, carrying)) = food_info else {
             error!(?entity, "No food found in child ants.");
             continue;
         };
@@ -354,13 +353,10 @@ pub fn offer_food_discovery_to_queen_action(
         match *state {
             ActionState::Requested => {
                 time.system_pause(true);
-                player_state.queens_choice = QueensChoice::Undecided(food_info.food_id);
+                player_state.queens_choice = QueensChoice::Undecided(carrying.food_info.clone());
                 *state = ActionState::Executing;
             }
             ActionState::Executing => {
-                // Show an egui dialog. TODO: Should probably be in another system!
-                // TODO: This is flickering. Maybe putting it in another system might help?
-
                 let mut done = false;
                 match player_state.queens_choice {
                     QueensChoice::None => {
@@ -372,7 +368,7 @@ pub fn offer_food_discovery_to_queen_action(
                     }
                     QueensChoice::Approve => {
                         // Add the food to the food state.
-                        food_state.approve_food(**food_info);
+                        food_state.approve_food((*carrying).clone());
 
                         // TODO: The queen eats the new food even if she is full.
 
@@ -381,7 +377,7 @@ pub fn offer_food_discovery_to_queen_action(
                     QueensChoice::Deny => {
                         // TODO: The queen eats the ant even if she is full.
                         // Food just vanishes.
-                        food_state.reject_food(food_info.food_id);
+                        food_state.reject_food(carrying.food_info.food_id);
                         done = true;
                     }
                 }
@@ -436,9 +432,12 @@ pub fn feed_queen_action(
     mut commands: Commands,
     mut ants: Query<(Entity, &Transform, &Children), With<AntType>>,
     carrying_food: Query<&CarryingFood>,
-    mut queen: Query<&mut Hunger, With<Queen>>,
+    queen: Query<Entity, With<Queen>>,
     mut actions: Query<(&Actor, &mut ActionState), With<FeedQueenAction>>,
+    mut feed_writer: EventWriter<FeedEvent>,
 ) {
+    let queen_entity = queen.single();
+
     for ((Actor(actor), mut state)) in actions.iter_mut() {
         if *state != ActionState::Requested {
             continue;
@@ -465,8 +464,10 @@ pub fn feed_queen_action(
         // Feed the queen and remove the food.
         commands.entity(child_food_entity).despawn_recursive();
 
-        let queen_hunger = queen.single_mut();
-        warn!("TODO: queen_hunger");
+        feed_writer.send(FeedEvent {
+            target: queen_entity,
+            carrying_food,
+        });
 
         *state = ActionState::Success;
     }

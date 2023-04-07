@@ -35,7 +35,7 @@ use crate::game::time::GameTime;
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub struct AppliedFoodSideEffect {
     pub food: FoodInfo,
-    pub timeout: Duration,
+    pub timeout_at: Duration,
 }
 
 /// All the side effects applied.
@@ -43,16 +43,20 @@ pub struct AppliedFoodSideEffect {
 pub struct AppliedFoodSideEffects(Vec<AppliedFoodSideEffect>);
 
 impl AppliedFoodSideEffects {
-    pub fn add_or_update(&mut self, food: FoodInfo, timeout: Duration) {
+    pub fn new() -> Self {
+        Self(Vec::new())
+    }
+
+    pub fn add_or_update(&mut self, food: FoodInfo, timeout_at: Duration) {
         if let Some(existing) = self.0.iter_mut().find(|existing| existing.food == food) {
-            existing.timeout = timeout;
+            existing.timeout_at = timeout_at;
         } else {
-            self.0.push(AppliedFoodSideEffect { food, timeout });
+            self.0.push(AppliedFoodSideEffect { food, timeout_at });
         }
     }
 
     pub fn remove_expired(&mut self, time: &Duration) {
-        self.0.retain(|existing| existing.timeout > *time);
+        self.0.retain(|existing| existing.timeout_at > *time);
     }
 
     /// Work out the total multipliers for each side effect.
@@ -93,8 +97,10 @@ impl CalculatedSideEffects {
     }
 }
 
-pub fn calculate_total_side_effects(side_effects_applied: &AppliedFoodSideEffects, calculated_side_effects: &mut CalculatedSideEffects) {
-    *calculated_side_effects = side_effects_applied.calculate_totals()
+pub fn calculate_total_side_effects(mut query: Query<(&AppliedFoodSideEffects, &mut CalculatedSideEffects)>) {
+    for (applied, mut calculated) in query.iter_mut() {
+        *calculated = applied.calculate_totals();
+    }
 }
 
 pub fn remove_expired_side_effects(
@@ -193,7 +199,7 @@ impl SideEffect {
                 multiplier.short_name_mutate(&mut s);
             }
             SideEffect::AntSpeed(multiplier) => {
-                s.push_str("Ant Speed ");
+                s.push_str("Ant Movement ");
                 multiplier.short_name_mutate(&mut s);
             }
             SideEffect::AntSquishRate(multiplier) => {
@@ -201,7 +207,7 @@ impl SideEffect {
                 multiplier.short_name_mutate(&mut s);
             }
             SideEffect::QueenEggRate(multiplier) => {
-                s.push_str("Queen Egg ");
+                s.push_str("Queen Egg Production ");
                 multiplier.short_name_mutate(&mut s);
             }
             SideEffect::QueenHungerRate(multiplier) => {
@@ -311,7 +317,7 @@ mod tests {
                         SideEffect::AntHungerRate(Multiplier::IncreaseBy(3f32)),
                     ],
                 },
-                timeout: Default::default(),
+                timeout_at: Default::default(),
             }]);
 
         let total = applied.calculate_totals();

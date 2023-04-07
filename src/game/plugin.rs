@@ -16,6 +16,8 @@ use bevy::utils::{HashMap, HashSet};
 use big_brain::prelude::*;
 use rand::prelude::{IteratorRandom, ThreadRng};
 use rand::Rng;
+use crate::game::food::FoodInfo;
+use crate::game::skill::SkillMode;
 
 pub const DIRT_Z: f32 = 0f32;
 pub const QUEEN_Z: f32 = 1f32;
@@ -58,6 +60,7 @@ impl Plugin for GamePlugin {
         app.add_event::<EggLaidEvent>();
         app.add_event::<SpawnAntEvent>();
         app.add_event::<food::AddFoodForAntToCarryEvent>();
+        app.add_event::<food::FeedEvent>();
         app.add_event::<UpdateTileDirtAmountEvent>();
         app.add_event::<UpdateFoodRenderingEvent>();
         app.add_event::<AddFoodZoneEvent>();
@@ -67,6 +70,7 @@ impl Plugin for GamePlugin {
         app.insert_resource(PlayerState::default());
         app.insert_resource(food::FoodState::default());
         app.insert_resource(PathfindingLinesDebug::default());
+        app.insert_resource(SkillMode::Career);
 
         app.add_startup_systems((
             camera::setup,
@@ -95,7 +99,7 @@ impl Plugin for GamePlugin {
         );
 
         // Raycast
-        app.add_systems((mouse::mouse_to_world,).in_set(InputSet::Raycast));
+        app.add_systems((mouse::mouse_to_world, ).in_set(InputSet::Raycast));
 
         // Game
         app.add_systems(
@@ -108,19 +112,28 @@ impl Plugin for GamePlugin {
                 game::map::update_food_tile_rendering,
                 game::map::detect_cell_content_changes_and_update_graph,
                 game::queen::grow_and_lay_eggs,
+                game::queen::update_queen_egg_progress_speed,
                 game::eggs::spawn_eggs,
                 game::eggs::grow_eggs,
                 game::animation::animate_sprites,
                 game::ants::spawn_ants,
                 game::hunger::hunger_system,
                 game::food::attach_food_to_ant,
-                game::zones::add_food_zones,
             )
                 .in_set(InputSet::Game),
         );
 
-        // Don't know why I can't add this to the InputSet::Game set above.
-        app.add_system(game::pathfinding::show_debug_lines);
+        app.add_systems(
+            (
+                game::zones::add_food_zones,
+                game::side_effects::remove_expired_side_effects,
+                game::side_effects::calculate_total_side_effects,
+                game::pathfinding::show_debug_lines,
+                game::debug::check_for_f3_to_offer_queen_new_food,
+            game::food::feed_queen,
+        )
+            .in_set(InputSet::Game),
+        );
 
         app.configure_set(InputSet::Reset.before(InputSet::Ui));
         app.configure_set(InputSet::Ui.before(InputSet::GetInput));
@@ -166,11 +179,11 @@ pub struct PlayerState {
     pub queens_choice: QueensChoice,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub enum QueensChoice {
     #[default]
     None,
-    Undecided(FoodId),
+    Undecided(FoodInfo),
     Approve,
     Deny,
 }

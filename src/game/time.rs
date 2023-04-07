@@ -88,6 +88,6 @@ pub fn input(input: Res<InputStates>, mut game_time: ResMut<GameTime>) {
 
     if input.just_pressed(InputAction::Speed3) {
         println!("Triple speed");
-        game_time.time_scale = 3;
+        game_time.time_scale = 10;
     }
 }

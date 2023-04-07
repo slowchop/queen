@@ -1,8 +1,10 @@
 use std::time::Duration;
+use bevy::prelude::*;
 use crate::game::food::FoodInfo;
 use crate::game::food_types::FoodId;
 use crate::game::side_effects::{SideEffect, SideEffectDiscriminants};
 
+#[derive(Resource)]
 pub enum SkillMode {
     Career,
     Random,

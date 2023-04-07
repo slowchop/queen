@@ -19,6 +19,7 @@ mod time;
 mod ui;
 mod zones;
 mod skill;
+mod debug;
 
 pub use plugin::GamePlugin;
 pub use plugin::InputSet;

@@ -6,9 +6,17 @@ use bevy::prelude::*;
 use bevy::utils::{HashMap, HashSet};
 use rand::{random, Rng};
 use std::time::Duration;
-use crate::game::side_effects::SideEffect;
+use crate::game::hunger::Hunger;
+use crate::game::queen::Queen;
+use crate::game::side_effects::{AppliedFoodSideEffects, SideEffect};
+use crate::game::time::GameTime;
 
-pub const DEFAULT_CARGO_CAPACITY: u32 = 10;
+pub const DEFAULT_CARGO_CAPACITY: f32 = 10f32;
+
+pub struct FeedEvent {
+    pub target: Entity,
+    pub carrying_food: CarryingFood,
+}
 
 /// Add food to an ant to carry. If they have some food already we should probably drop it.
 pub struct AddFoodForAntToCarryEvent {
@@ -35,15 +43,15 @@ pub enum CarryFoodType {
 #[derive(Component, Debug, Clone, Copy)]
 pub struct CarryingFood {
     pub food_id: FoodId,
-    pub amount: u32,
+    pub amount: f32,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct DiscoveredFood {
-    pub food_id: FoodId,
+    pub food_info: FoodInfo,
     pub position: SideIPos,
     pub time_to_discover: Duration,
-    pub stash_remaining: u32,
+    pub stash_remaining: f32,
 }
 
 impl AddFoodForAntToCarryEvent {
@@ -111,6 +119,10 @@ pub struct FoodState {
 }
 
 impl FoodState {
+    pub fn get_discovered_food(&self, food_id: FoodId) -> Option<&DiscoveredFood> {
+        self.approved.iter().find(|f| f.food_info.food_id == food_id)
+    }
+
     /// This won't fail. It will always pick some spot.
     ///
     /// First try a random zone. If not, somewhere near the queen.
@@ -143,7 +155,7 @@ impl FoodState {
             }
 
             // We don't want approved either.
-            if self.approved.iter().any(|f| f.food_id == food_id) {
+            if self.approved.iter().any(|f| f.food_info.food_id == food_id) {
                 continue;
             }
 
@@ -168,21 +180,21 @@ impl FoodState {
 
         let mut rng = rand::thread_rng();
         let index = rng.gen_range(0..self.approved.len());
-        self.approved.iter().nth(index).map(|f| f.food_id)
+        self.approved.iter().nth(index).map(|f| f.food_info.food_id)
     }
 
     pub fn position_of_food_source(&self, food_id: FoodId) -> Option<SideIPos> {
         self.approved
             .iter()
-            .find(|f| f.food_id == food_id)
+            .find(|f| f.food_info.food_id == food_id)
             .map(|f| f.position)
     }
 
     /// Return None if food has run out or not found.
     pub fn take_food_from_discovered_source(&mut self, food_id: &FoodId) -> Option<CarryingFood> {
-        let mut food = self.approved.iter_mut().find(|f| f.food_id == *food_id)?;
+        let mut food = self.approved.iter_mut().find(|f| f.food_info.food_id == *food_id)?;
 
-        if food.stash_remaining == 0 {
+        if food.stash_remaining <= 0f32 {
             return None;
         }
 
@@ -191,7 +203,7 @@ impl FoodState {
         food.stash_remaining -= amount;
 
         Some(CarryingFood {
-            food_id: food.food_id,
+            food_id: food.food_info.food_id,
             amount,
         })
     }
@@ -229,14 +241,14 @@ impl FoodState {
     pub fn eta(&self, food_id: &FoodId) -> Option<Duration> {
         self.approved
             .iter()
-            .find(|f| f.food_id == *food_id)
+            .find(|f| f.food_info.food_id == *food_id)
             .map(|f| f.time_to_discover)
     }
 }
 
 /// A container for all the food stored in a cell.
 #[derive(Deref, DerefMut, Default)]
-pub struct FoodCell(HashMap<FoodId, u32>);
+pub struct FoodCell(HashMap<FoodId, f32>);
 
 impl FoodCell {
     /// If the food exists we add to the number.
@@ -253,16 +265,16 @@ impl FoodCell {
     /// Find the first food and get as much as possible up to the amount specified.
     ///
     /// If there is nothing left in the hash entry, remove it.
-    pub fn take_any_food_up_to_max_amount(&mut self, amount: u32) -> Option<CarryingFood> {
+    pub fn take_any_food_up_to_max_amount(&mut self, amount: f32) -> Option<CarryingFood> {
         let food_id = *self.0.keys().next()?;
         let current_amount = self.0.get_mut(&food_id)?;
 
         let amount_to_take = amount.min(*current_amount);
-        debug_assert!(amount_to_take > 0);
+        debug_assert!(amount_to_take > 0f32);
 
         *current_amount -= amount_to_take;
 
-        if *current_amount == 0 {
+        if *current_amount <= 0f32 {
             self.0.remove(&food_id);
         }
 
@@ -299,5 +311,26 @@ impl Default for NextDiscoverTime {
     fn default() -> Self {
         // TODO: 20s?
         Self(Duration::from_secs(5))
+    }
+}
+
+pub fn feed_queen(
+    time: Res<GameTime>,
+    food_state: Res<FoodState>,
+    mut feed_reader: EventReader<FeedEvent>,
+    mut queens: Query<(&mut Hunger, &mut AppliedFoodSideEffects, With<Queen>)>,
+) {
+    for event in feed_reader.iter() {
+        for (mut hunger, mut applied, _) in queens.iter_mut() {
+            hunger.feed(event.carrying_food.amount);
+
+            let carrying_food = &event.carrying_food;
+            let Some(discovered_food) = food_state.get_discovered_food(carrying_food.food_id) else {
+                error!("Food not found!");
+                continue;
+            };
+
+            applied.add_or_update(discovered_food.food_info.clone(), time.since_startup() + Duration::from_secs(5 * 60));
+        }
     }
 }

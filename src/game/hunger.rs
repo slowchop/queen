@@ -17,6 +17,13 @@ impl Hunger {
         }
     }
 
+    pub fn feed(&mut self, amount: f32) {
+        self.current -= amount;
+        if self.current < 0f32 {
+            self.current = 0f32;
+        }
+    }
+
     pub fn starving_offset(&self) -> f32 {
         (self.starving_at - self.current).max(0f32)
     }
