@@ -50,21 +50,26 @@ pub fn control(
                 ui.vertical(|ui| {
                     ui.heading("Queen");
                     ui.label(format!("Hunger: {:.1}%", queen_hunger.hunger_fraction()));
-                    ui.label(format!("Egg: {:.1}%", queen_info.egg_progress * 100f32));
+
+                    // egg progress total goes from 0 - 1, and the egg_progress_speed is how much per second.
+                    // let rate_per_hour = 3600f32 / queen_info.egg_progress_speed;
+                    // ui.label(format!("Egg: {:.1}% ({:.02} per hour)", queen_info.egg_progress * 100f32, rate_per_hour));
+                    let seconds_per_egg = 1f32 / queen_info.egg_progress_speed;
+                    ui.label(format!("Egg: {:.1}% ({:.0}s per egg)", queen_info.egg_progress * 100f32, seconds_per_egg));
                 });
 
                 ui.separator();
 
-                ui.vertical(|ui| {
-                    ui.heading("Actions");
-                    ui.horizontal_centered(|ui| {
-                        ui.selectable_value(action_mode, ActionMode::Select, "Select");
-                        ui.selectable_value(action_mode, ActionMode::Dig, "Dig");
-                    });
-                });
-
-                ui.separator();
-
+                // ui.vertical(|ui| {
+                //     ui.heading("Actions");
+                //     ui.horizontal_centered(|ui| {
+                //         ui.selectable_value(action_mode, ActionMode::Select, "Select");
+                //         ui.selectable_value(action_mode, ActionMode::Dig, "Dig");
+                //     });
+                // });
+                //
+                // ui.separator();
+                //
                 ui.vertical(|ui| {
                     ui.heading("Next Ant Type");
                     ui.horizontal_centered(|ui| {

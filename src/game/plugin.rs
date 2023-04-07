@@ -130,7 +130,7 @@ impl Plugin for GamePlugin {
                 game::side_effects::calculate_total_side_effects,
                 game::pathfinding::show_debug_lines,
                 game::debug::check_for_f3_to_offer_queen_new_food,
-            game::food::feed_queen,
+                game::food::feed_and_apply,
         )
             .in_set(InputSet::Game),
         );
@@ -215,4 +215,8 @@ impl Default for Speed {
     fn default() -> Self {
         Self::new(64.0)
     }
+}
+
+pub fn apply_speed(speed: &Speed, time: &GameTime) -> f32 {
+    speed.0 * time.delta_seconds()
 }

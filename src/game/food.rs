@@ -314,14 +314,14 @@ impl Default for NextDiscoverTime {
     }
 }
 
-pub fn feed_queen(
+pub fn feed_and_apply(
     time: Res<GameTime>,
     food_state: Res<FoodState>,
     mut feed_reader: EventReader<FeedEvent>,
-    mut queens: Query<(&mut Hunger, &mut AppliedFoodSideEffects, With<Queen>)>,
+    mut query: Query<(&mut Hunger, &mut AppliedFoodSideEffects)>,
 ) {
     for event in feed_reader.iter() {
-        for (mut hunger, mut applied, _) in queens.iter_mut() {
+        for (mut hunger, mut applied) in query.iter_mut() {
             hunger.feed(event.carrying_food.amount);
 
             let carrying_food = &event.carrying_food;
@@ -334,3 +334,4 @@ pub fn feed_queen(
         }
     }
 }
+
