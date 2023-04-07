@@ -1,27 +1,29 @@
+//! Side effects!
+//!
+//! Example side effects might be (in english):
+//!
+//!   "All new ants will have a 50% of being a random ant type"
+//!   "All new ants will walk 5x faster"
+//!   "All new ants will get hungry 3x faster"
+//!   "All new ants will get hungry 2x slower"
+//!   "All new ants will eat 3x faster"
+//!   "All new ants will eat 3x as much food"
+//!   "All new ants will eat 2x slower"
+//!   "All ants will get squished outside 2x as often"
+//!   "All ants will get squished outside 2x as often"
+//!   "The Queen will eat passing by ants when starving 2x as often"
+//!   "The Queen will increase egg laying speed by 2x"
+//!   "The Queen will decrease egg laying speed by 3x"
+//!   "The Queen's eggs will take 5x longer to hatch"
+//!   "The Queen's eggs will be 2x as less likely to hatch"
+//!   "Scout ants will take 2x longer to find new food"
+//!   "Scout ants will take 3x less time to find new food"
+//!   "Cargo ants will take 2x longer to gather food"
+//!   "Cargo ants will lose half the food they gather"
+//!
+//! Higher score the better for the player.
+//!
 use strum::{EnumCount, FromRepr};
-
-///! Side effects!
-///!
-///! Example side effects might be (in english):
-///!   
-///!   "All new ants will have a 50% of being a random ant type"
-///!   "All new ants will walk 5x faster"
-///!   "All new ants will get hungry 3x faster"
-///!   "All new ants will get hungry 2x slower"
-///!   "All new ants will eat 3x faster"
-///!   "All new ants will eat 3x as much food"
-///!   "All new ants will eat 2x slower"
-///!   "All ants will get squished outside 2x as often"
-///!   "All ants will get squished outside 2x as often"
-///!   "The Queen will eat passing by ants when starving 2x as often"
-///!   "The Queen will increase egg laying speed by 2x"
-///!   "The Queen will decrease egg laying speed by 3x"
-///!   "The Queen's eggs will take 5x longer to hatch"
-///!   "The Queen's eggs will be 2x as less likely to hatch"
-///!   "Scout ants will take 2x longer to find new food"
-///!   "Scout ants will take 3x less time to find new food"
-///!   "Cargo ants will take 2x longer to gather food"
-///!   "Cargo ants will lose half the food they gather"
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumCount)]
 pub enum SideEffect {
@@ -33,7 +35,7 @@ pub enum SideEffect {
 impl SideEffect {
     /// Would be cool if some foods gave specific effects.
     pub fn random() -> Self {
-        let random = rand::random::<u32>() % SideEffect::COUNT;
+        let random = rand::random::<u32>() % SideEffect::COUNT as u32;
         match random {
             0 => Self::NewAnts(AntEffectType::random()),
             1 => Self::AllAnts(AntEffectType::random()),
@@ -47,6 +49,14 @@ impl SideEffect {
             Self::NewAnts(effect) => effect.score(),
             Self::AllAnts(effect) => effect.score(),
             Self::Queen(effect) => effect.score(),
+        }
+    }
+
+    pub fn unique_id(&self) -> String {
+        match self {
+            Self::NewAnts(effect) => effect.unique_id_without_multiplier(),
+            Self::AllAnts(effect) => effect.unique_id_without_multiplier(),
+            Self::Queen(effect) => effect.unique_id_without_multiplier(),
         }
     }
 
@@ -72,7 +82,7 @@ impl SideEffect {
     }
 }
 
-#[derive(EnumCount, FromRepr)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumCount)]
 pub enum QueenEffectType {
     HatchRate(Multiplier),
     HungerRate(Multiplier),
@@ -80,7 +90,7 @@ pub enum QueenEffectType {
 
 impl QueenEffectType {
     pub fn random() -> Self {
-        let random = rand::random::<u32>() % QueenEffectType::COUNT;
+        let random = rand::random::<u32>() % QueenEffectType::COUNT as u32;
         match random {
             0 => Self::HatchRate(Multiplier::random()),
             1 => Self::HungerRate(Multiplier::random()),
@@ -88,12 +98,37 @@ impl QueenEffectType {
         }
     }
 
-    pub fn score(&self) -> i32 {
+    pub fn unique_id_without_multiplier(&self) -> String {
+        match self {
+            Self::HatchRate(_) => format!("QueenHatchRate"),
+            Self::HungerRate(_) => format!("QueenHungerRate"),
+        }
+    }
 
+    pub fn score(&self) -> i32 {
+        match self {
+            Self::HatchRate(multiplier) => 2 * multiplier.score(),
+            Self::HungerRate(multiplier) => -3 * multiplier.score(),
+        }
+    }
+
+    pub fn short_name_mutate(&self, mut s: &mut String) {
+        let multiplier = match self {
+            Self::HatchRate(multiplier) => {
+                s.push_str("Hatch Rate ");
+                multiplier
+            }
+            Self::HungerRate(multiplier) => {
+                s.push_str("Hunger Rate ");
+                multiplier
+            }
+        };
+
+        multiplier.short_name_mutate(&mut s);
     }
 }
 
-#[derive(EnumCount, FromRepr)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumCount)]
 pub enum AntEffectType {
     HungerRate(Multiplier),
     WalkSpeed(Multiplier),
@@ -103,15 +138,28 @@ pub enum AntEffectType {
 impl AntEffectType {
     pub fn score(&self) -> i32 {
         match self {
-            Self::HungerRate(multiplier) => 20 * multiplier.score(),
-            Self::WalkSpeed(multiplier) => 10 * multiplier.score(),
-            Self::SquishRate(multiplier) => 5 * multiplier.score(),
+            Self::HungerRate(multiplier) => -3 * multiplier.score(),
+            Self::WalkSpeed(multiplier) => 3 * multiplier.score(),
+            Self::SquishRate(multiplier) => -2 * multiplier.score(),
         }
     }
 
     pub fn random() -> Self {
         let random = rand::random::<usize>() % Self::COUNT;
-        Self::from_repr(random).unwrap()
+        match random {
+            0 => Self::HungerRate(Multiplier::random()),
+            1 => Self::WalkSpeed(Multiplier::random()),
+            2 => Self::SquishRate(Multiplier::random()),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn unique_id_without_multiplier(&self) -> String {
+        match self {
+            Self::HungerRate(_) => format!("AntHungerRate"),
+            Self::WalkSpeed(_) => format!("AntWalkSpeed"),
+            Self::SquishRate(_) => format!("AntSquishRate"),
+        }
     }
 
     pub fn short_name(&self) -> String {
@@ -130,12 +178,17 @@ impl AntEffectType {
                 s.push_str("Squish ");
                 multiplier
             }
+            AntEffectType::HungerRate(multiplier) => {
+                s.push_str("Hunger ");
+                multiplier
+            }
         };
 
         multiplier.short_name_mutate(&mut s);
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Multiplier {
     IncreaseBy(u8),
     DecreaseBy(u8),
@@ -189,39 +242,15 @@ mod tests {
         let fixtures = vec![
             (
                 "New: Walk x2",
-                SideEffect::NewAnts(EffectType::WalkSpeed(Multiplier::IncreaseBy(2))),
+                SideEffect::NewAnts(AntEffectType::WalkSpeed(Multiplier::IncreaseBy(2))),
             ),
             (
                 "All: Walk /2",
-                SideEffect::AllAnts(EffectType::WalkSpeed(Multiplier::DecreaseBy(2))),
+                SideEffect::AllAnts(AntEffectType::WalkSpeed(Multiplier::DecreaseBy(2))),
             ),
             (
                 "Queen: Walk x2",
-                SideEffect::Queen(EffectType::WalkSpeed(Multiplier::IncreaseBy(2))),
-            ),
-            (
-                "New: Hatch x2",
-                SideEffect::NewAnts(EffectType::HatchRate(Multiplier::IncreaseBy(2))),
-            ),
-            (
-                "All: Hatch /2",
-                SideEffect::AllAnts(EffectType::HatchRate(Multiplier::DecreaseBy(2))),
-            ),
-            (
-                "Queen: Hatch x2",
-                SideEffect::Queen(EffectType::HatchRate(Multiplier::IncreaseBy(2))),
-            ),
-            (
-                "New: Squish x2",
-                SideEffect::NewAnts(EffectType::SquishRate(Multiplier::IncreaseBy(2))),
-            ),
-            (
-                "All: Squish /2",
-                SideEffect::AllAnts(EffectType::SquishRate(Multiplier::DecreaseBy(2))),
-            ),
-            (
-                "Queen: Squish x2",
-                SideEffect::Queen(EffectType::SquishRate(Multiplier::IncreaseBy(2))),
+                SideEffect::Queen(QueenEffectType::HatchRate(Multiplier::IncreaseBy(2))),
             ),
         ];
 
