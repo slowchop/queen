@@ -20,15 +20,13 @@ use crate::game::positions::SideIPos;
 use crate::game::queen::Queen;
 use crate::game::skill::SkillMode;
 use crate::game::time::GameTime;
+use bevy::ecs::system::EntityCommands;
 use bevy::prelude::*;
 use big_brain::actions::StepsBuilder;
 use big_brain::prelude::*;
 use rand::prelude::SliceRandom;
+use std::fmt::Debug;
 use std::time::Duration;
-
-/// When hungry or needs food for the queen, move to some food.
-#[derive(Clone, Component, Debug, ActionBuilder)]
-pub struct MoveToFoodAction;
 
 pub fn eat_food() -> StepsBuilder {
     // TODO: expand this
@@ -36,7 +34,7 @@ pub fn eat_food() -> StepsBuilder {
         .label("Eat")
         .step(SetPathToStoredFoodAction)
         .step(PathfindingAction)
-        .step(EatAction)
+        .step(EatAction::default())
 }
 
 pub fn discover_food_and_offer_to_the_queen_steps() -> StepsBuilder {
@@ -563,5 +561,200 @@ pub fn hungry_scorer(
         if let Ok(hunger) = hungers.get(*actor) {
             score.set(hunger.hunger_score());
         }
+    }
+}
+
+pub enum Action {
+    SetPathToStoredFoodAction,
+    // PathfindingAction,
+    EatAction,
+    // SetPAthToRandomOutsideAction,
+    // MapTransitionAction,
+}
+
+impl Action {
+    pub fn insert(&self, ec: &mut EntityCommands) {
+        match self {
+            Action::SetPathToStoredFoodAction => ec.insert(SetPathToStoredFoodAction2),
+            Action::EatAction => ec.insert(EatAction2::default()),
+        };
+        ()
+    }
+
+    pub fn remove(&self, ec: &mut EntityCommands) {
+        match self {
+            Action::SetPathToStoredFoodAction => ec.remove::<SetPathToStoredFoodAction2>(),
+            Action::EatAction => ec.remove::<EatAction2>(),
+        };
+        ()
+    }
+}
+
+#[derive(Component)]
+pub struct SetPathToStoredFoodAction2;
+
+#[derive(Component, Default, Deref, DerefMut)]
+pub struct EatAction2(Option<EatActionInner>);
+
+pub struct EatActionInner {
+    finish_eating_at: Duration,
+}
+
+#[derive(Deref, DerefMut)]
+pub struct Sequence(Vec<Action>);
+
+impl Sequence {
+    pub fn new() -> Self {
+        Self(Vec::new())
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum IdeaState {
+    Prepare(usize),
+    Executing(usize),
+    Done,
+    Aborted,
+}
+
+#[derive(Component)]
+pub struct Idea {
+    state: IdeaState,
+    steps: Sequence,
+}
+
+impl Idea {
+    pub fn abort(&mut self) {
+        self.state = IdeaState::Aborted;
+    }
+
+    pub fn progress(&mut self) {
+        match self.state {
+            IdeaState::Executing(step) => {
+                // OK to overflow. assign_step_components will handle it.
+                self.state = IdeaState::Prepare(step + 1);
+            }
+            _ => {
+                panic!("Invalid state: {:?}", self.state);
+            }
+        }
+    }
+}
+
+pub fn new_eat_food_steps() -> Sequence {
+    let mut steps = Sequence::new();
+    steps.push(Action::SetPathToStoredFoodAction);
+    // steps.push(Action::PathfindingAction);
+    steps.push(Action::EatAction);
+    steps
+}
+
+pub fn assign_step_components(mut commands: Commands, mut executing: Query<(Entity, &mut Idea)>) {
+    for (entity, mut executing) in &mut executing {
+        if let IdeaState::Prepare(step) = &executing.state {
+            if *step > 0 {
+                let last_step = step - 1;
+                let action = &executing.steps[last_step];
+                action.remove(&mut commands.entity(entity));
+            }
+
+            let action = &executing.steps[*step];
+            action.insert(&mut commands.entity(entity));
+            executing.state = IdeaState::Executing(*step);
+        }
+    }
+}
+
+pub fn set_path_to_stored_food_action_2(
+    food_state: Res<FoodState>,
+    mut query: Query<(&mut Idea, &mut Path), With<SetPathToStoredFoodAction2>>,
+) {
+    for (mut idea, mut path) in &mut query {
+        let Some(target) = food_state.find_destination_to_take_food() else {
+            warn!("No food to take");
+            idea.abort();
+            continue;
+        };
+
+        info!("------ Pathing to stored food at {:?}", target);
+        path.set_target(target);
+
+        idea.progress();
+    }
+}
+
+pub fn eat_action_2(
+    time: Res<GameTime>,
+    mut food_state: ResMut<FoodState>,
+    mut query: Query<(Entity, &mut Idea, &mut EatAction2, &Transform)>,
+    mut feed_writer: EventWriter<FeedEvent>,
+    mut update_food_rendering_writer: EventWriter<UpdateFoodRenderingEvent>,
+) {
+    for (entity, mut idea, mut action, transform) in &mut query {
+        if action.is_none() {
+            let pos = SideIPos::from(transform);
+
+            let Some(carrying_food) = food_state.take_food_from_position(pos, 1f32) else {
+                warn!("Tried to eat food but there was none.");
+                idea.abort();
+                continue;
+            };
+
+            info!(?carrying_food, "Eating food");
+
+            feed_writer.send(FeedEvent {
+                target: entity,
+                carrying_food,
+            });
+
+            update_food_rendering_writer.send(UpdateFoodRenderingEvent(pos));
+
+            **action = Some(EatActionInner {
+                finish_eating_at: time.since_startup() + Duration::from_secs(5),
+            });
+        };
+
+        let inner = action.0.as_ref().unwrap();
+        if time.since_startup() >= inner.finish_eating_at {
+            info!("Finished eating food");
+            idea.progress();
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_brain() {
+        let mut app = App::new();
+
+        app.insert_resource(FoodState::default());
+
+        app.add_systems((assign_step_components, set_path_to_stored_food_action_2));
+
+        let idea = Idea {
+            state: IdeaState::Prepare(0),
+            steps: new_eat_food_steps(),
+        };
+
+        // Setup test entities
+        let ant = app.world.spawn((Path::None, idea)).id();
+
+        // Run systems
+        app.update();
+
+        let state = &app.world.get::<Idea>(ant).unwrap().state;
+        assert_eq!(*state, IdeaState::Executing(0));
+
+        app.update();
+
+        let state = &app.world.get::<Idea>(ant).unwrap().state;
+        assert_eq!(*state, IdeaState::Aborted);
+
+        // Check resulting changes
+        // assert!(app.world.get::<Enemy>(enemy_id).is_some());
+        // assert_eq!(app.world.get::<Enemy>(enemy_id).unwrap().hit_points, 4);
     }
 }
