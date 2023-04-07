@@ -10,43 +10,43 @@ use big_brain::actions::ActionState;
 use big_brain::prelude::{ActionBuilder, Actor};
 use rand::prelude::SliceRandom;
 
-/// Actor is on a path. This action is to follow the path and finish when the path is finished.
-#[derive(Clone, Component, Debug, ActionBuilder)]
-pub struct PathfindingAction;
-
-pub fn pathfinding_action(
-    mut ants: Query<&mut Path>,
-    mut query: Query<(&Actor, &mut ActionState), With<PathfindingAction>>,
-) {
-    for (Actor(actor), mut state) in query.iter_mut() {
-        let Ok(mut path) = ants.get_mut(*actor) else {
-            warn!("No path for actor {:?}", actor);
-            continue;
-        };
-
-        match *state {
-            ActionState::Requested => {
-                // We expect to already have a path set.
-                if !path.is_progressing() {
-                    error!("Path expected to be set in pathfinding_action but it wasn't");
-                    *state = ActionState::Failure;
-                    continue;
-                }
-
-                *state = ActionState::Executing;
-            }
-            ActionState::Executing => {
-                if path.did_complete() {
-                    *state = ActionState::Success;
-                } else if path.did_fail() {
-                    error!("Path failed for actor {:?} in pathfinding_action", actor);
-                    *state = ActionState::Failure;
-                }
-            }
-            _ => {}
-        }
-    }
-}
+// /// Actor is on a path. This action is to follow the path and finish when the path is finished.
+// #[derive(Clone, Component, Debug, ActionBuilder)]
+// pub struct PathfindingAction;
+//
+// pub fn pathfinding_action(
+//     mut ants: Query<&mut Path>,
+//     mut query: Query<(&Actor, &mut ActionState), With<PathfindingAction>>,
+// ) {
+//     for (Actor(actor), mut state) in query.iter_mut() {
+//         let Ok(mut path) = ants.get_mut(*actor) else {
+//             warn!("No path for actor {:?}", actor);
+//             continue;
+//         };
+//
+//         match *state {
+//             ActionState::Requested => {
+//                 // We expect to already have a path set.
+//                 if !path.is_progressing() {
+//                     error!("Path expected to be set in pathfinding_action but it wasn't");
+//                     *state = ActionState::Failure;
+//                     continue;
+//                 }
+//
+//                 *state = ActionState::Executing;
+//             }
+//             ActionState::Executing => {
+//                 if path.did_complete() {
+//                     *state = ActionState::Success;
+//                 } else if path.did_fail() {
+//                     error!("Path failed for actor {:?} in pathfinding_action", actor);
+//                     *state = ActionState::Failure;
+//                 }
+//             }
+//             _ => {}
+//         }
+//     }
+// }
 
 /// A scout or cargo ant needs to find a destination to the outside.
 #[derive(Clone, Component, Debug, ActionBuilder)]
@@ -169,33 +169,33 @@ pub fn set_path_to_queen_action(
     }
 }
 
-#[derive(Clone, Component, Debug, ActionBuilder)]
-pub struct SetPathToStoredFoodAction;
-
-pub fn set_path_to_stored_food_action(
-    food_state: Res<FoodState>,
-    mut ants: Query<&mut Path>,
-    mut query: Query<(&Actor, &mut ActionState), With<SetPathToStoredFoodAction>>,
-) {
-    for (Actor(actor), mut state) in query.iter_mut() {
-        let Ok(mut path) = ants.get_mut(*actor) else {
-            warn!("No path for actor {:?}", actor);
-            continue;
-        };
-
-        if *state != ActionState::Requested {
-            continue;
-        }
-
-        let Some(target) = food_state.find_destination_to_take_food() else {
-            warn!("No food to take");
-            *state = ActionState::Failure;
-            continue;
-        };
-
-        info!("------ Pathing to stored food at {:?}", target);
-        path.set_target(target);
-
-        *state = ActionState::Success;
-    }
-}
+// #[derive(Clone, Component, Debug, ActionBuilder)]
+// pub struct SetPathToStoredFoodAction;
+//
+// pub fn set_path_to_stored_food_action(
+//     food_state: Res<FoodState>,
+//     mut ants: Query<&mut Path>,
+//     mut query: Query<(&Actor, &mut ActionState), With<SetPathToStoredFoodAction>>,
+// ) {
+//     for (Actor(actor), mut state) in query.iter_mut() {
+//         let Ok(mut path) = ants.get_mut(*actor) else {
+//             warn!("No path for actor {:?}", actor);
+//             continue;
+//         };
+//
+//         if *state != ActionState::Requested {
+//             continue;
+//         }
+//
+//         let Some(target) = food_state.find_destination_to_take_food() else {
+//             warn!("No food to take");
+//             *state = ActionState::Failure;
+//             continue;
+//         };
+//
+//         info!("------ Pathing to stored food at {:?}", target);
+//         path.set_target(target);
+//
+//         *state = ActionState::Success;
+//     }
+// }

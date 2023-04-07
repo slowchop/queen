@@ -1,23 +1,23 @@
 use crate::game;
 use crate::game::ants::AntType;
 use crate::game::eggs::SpawnAntEvent;
+use crate::game::food::FoodInfo;
 use crate::game::food_types::FoodId;
 use crate::game::map::{AddFoodZoneEvent, UpdateFoodRenderingEvent, UpdateTileDirtAmountEvent};
 use crate::game::pathfinding::{PathfindingLinesDebug, VisitedNodeEvent};
 use crate::game::positions::SideIPos;
 use crate::game::queen::{EggLaidEvent, Queen};
 use crate::game::setup::queen_start;
+use crate::game::skill::SkillMode;
 use crate::game::time::GameTime;
 use crate::game::zones::FoodStorageZones;
-use crate::game::{actions, brains, camera, food, mouse, setup, time, ui};
+use crate::game::{actions, brains, camera, food, mouse, new_brain, setup, simple_brain, time, ui};
 use bevy::app::{App, Plugin};
 use bevy::prelude::*;
 use bevy::utils::{HashMap, HashSet};
 use big_brain::prelude::*;
 use rand::prelude::{IteratorRandom, ThreadRng};
 use rand::Rng;
-use crate::game::food::FoodInfo;
-use crate::game::skill::SkillMode;
 
 pub const DIRT_Z: f32 = 0f32;
 pub const QUEEN_Z: f32 = 1f32;
@@ -99,7 +99,7 @@ impl Plugin for GamePlugin {
         );
 
         // Raycast
-        app.add_systems((mouse::mouse_to_world, ).in_set(InputSet::Raycast));
+        app.add_systems((mouse::mouse_to_world,).in_set(InputSet::Raycast));
 
         // Game
         app.add_systems(
@@ -132,8 +132,19 @@ impl Plugin for GamePlugin {
                 game::debug::check_for_f3_to_offer_queen_new_food,
                 game::food::feed_and_apply,
                 game::pathfinding::update_movement_speed,
-        )
-            .in_set(InputSet::Game),
+            )
+                .in_set(InputSet::Game),
+        );
+
+        app.add_systems((simple_brain::assign_step_components,).in_set(InputSet::Game));
+
+        app.add_systems(
+            (
+                new_brain::eat_action_2,
+                new_brain::pathfinding_action_2,
+                new_brain::set_path_to_stored_food_action_2,
+            )
+                .in_set(InputSet::Game),
         );
 
         app.configure_set(InputSet::Reset.before(InputSet::Ui));
@@ -143,26 +154,26 @@ impl Plugin for GamePlugin {
         app.configure_set(InputSet::Raycast.before(InputSet::Game));
 
         // Brain things
-        app.add_systems(
-            (
-                brains::pathfinding::pathfinding_action,
-                brains::pathfinding::set_path_to_outside_action,
-                brains::pathfinding::set_path_and_assign_food_to_discovered_food_action,
-                brains::pathfinding::set_path_to_food_storage_action,
-                brains::pathfinding::set_path_to_stored_food_action,
-                brains::pathfinding::set_path_to_queen_action,
-                brains::map_transition_action,
-                brains::outside_map_discovering_food_action,
-                brains::outside_map_gathering_existing_food_action,
-                brains::offer_food_discovery_to_queen_action,
-                brains::place_food_if_possible_action,
-                brains::pick_up_food_action,
-                brains::feed_queen_action,
-                brains::eat_action,
-                brains::hungry_scorer,
-            )
-                .in_set(BigBrainSet::Actions),
-        );
+        // app.add_systems(
+        //     (
+        //         brains::pathfinding::pathfinding_action,
+        //         brains::pathfinding::set_path_to_outside_action,
+        //         brains::pathfinding::set_path_and_assign_food_to_discovered_food_action,
+        //         brains::pathfinding::set_path_to_food_storage_action,
+        //         brains::pathfinding::set_path_to_stored_food_action,
+        //         brains::pathfinding::set_path_to_queen_action,
+        //         brains::map_transition_action,
+        //         brains::outside_map_discovering_food_action,
+        //         brains::outside_map_gathering_existing_food_action,
+        //         brains::offer_food_discovery_to_queen_action,
+        //         brains::place_food_if_possible_action,
+        //         brains::pick_up_food_action,
+        //         brains::feed_queen_action,
+        //         brains::eat_action,
+        //         brains::hungry_scorer,
+        //     )
+        //         .in_set(BigBrainSet::Actions),
+        // );
         // app.add_system_to_stage(BigBrainStage::Scorers, ());
     }
 
