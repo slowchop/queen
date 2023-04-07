@@ -5,7 +5,7 @@ use crate::game::plugin::PlayerState;
 use crate::game::positions::SideIPos;
 use crate::game::time::GameTime;
 use bevy::prelude::*;
-use crate::game::side_effects::{AppliedSideEffects, CalculatedSideEffects, SideEffectDiscriminants};
+use crate::game::side_effects::{AppliedFoodSideEffects, CalculatedSideEffects, SideEffectDiscriminants};
 
 #[derive(Debug)]
 pub struct EggLaidEvent {

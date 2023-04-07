@@ -31,23 +31,23 @@ use strum::{EnumCount, EnumDiscriminants};
 use crate::game::food::FoodInfo;
 use crate::game::time::GameTime;
 
-/// A side effect applied to an entity. One per food. The component is [AppliedSideEffects].
+/// A side effect applied to an entity. One per food. The component is [AppliedFoodSideEffects].
 #[derive(Debug, Clone, PartialEq, Hash)]
-pub struct AppliedSideEffect {
+pub struct AppliedFoodSideEffect {
     pub food: FoodInfo,
     pub timeout: Duration,
 }
 
 /// All the side effects applied.
 #[derive(Component, Deref, DerefMut)]
-pub struct AppliedSideEffects(Vec<AppliedSideEffect>);
+pub struct AppliedFoodSideEffects(Vec<AppliedFoodSideEffect>);
 
-impl AppliedSideEffects {
+impl AppliedFoodSideEffects {
     pub fn add_or_update(&mut self, food: FoodInfo, timeout: Duration) {
         if let Some(existing) = self.0.iter_mut().find(|existing| existing.food == food) {
             existing.timeout = timeout;
         } else {
-            self.0.push(AppliedSideEffect { food, timeout });
+            self.0.push(AppliedFoodSideEffect { food, timeout });
         }
     }
 
@@ -59,7 +59,7 @@ impl AppliedSideEffects {
     pub fn calculate_totals(&self) -> CalculatedSideEffects {
         let mut calculated_side_effects = CalculatedSideEffects::new();
         for applied_side_effect in self.0.iter() {
-            for side_effect in &applied_side_effect.food.side_effects{
+            for side_effect in &applied_side_effect.food.side_effects {
                 calculated_side_effects.apply(side_effect);
             }
         };
@@ -93,13 +93,13 @@ impl CalculatedSideEffects {
     }
 }
 
-pub fn calculate_total_side_effects(side_effects_applied: &AppliedSideEffects, calculated_side_effects: &mut CalculatedSideEffects) {
+pub fn calculate_total_side_effects(side_effects_applied: &AppliedFoodSideEffects, calculated_side_effects: &mut CalculatedSideEffects) {
     *calculated_side_effects = side_effects_applied.calculate_totals()
 }
 
 pub fn remove_expired_side_effects(
     time: Res<GameTime>,
-    mut applied_side_effects: Query<&mut AppliedSideEffects>,
+    mut applied_side_effects: Query<&mut AppliedFoodSideEffects>,
 ) {
     let time = time.since_startup();
     for mut applied in applied_side_effects.iter_mut() {
@@ -297,27 +297,47 @@ impl Multiplier {
 
 #[cfg(test)]
 mod tests {
+    use crate::game::food_types::FoodId;
     use super::*;
 
     #[test]
-    fn short_names() {
-        let fixtures = vec![
-            (
-                "New: Walk x2",
-                SideEffect::NewAnts(AntEffectType::WalkSpeed(Multiplier::IncreaseBy(2))),
-            ),
-            (
-                "All: Walk /2",
-                SideEffect::AllAnts(AntEffectType::WalkSpeed(Multiplier::DecreaseBy(2))),
-            ),
-            (
-                "Queen: Walk x2",
-                SideEffect::Queen(QueenEffectType::HatchRate(Multiplier::IncreaseBy(2))),
-            ),
-        ];
+    fn applied_to_total() {
+        let mut applied = AppliedFoodSideEffects(vec![
+            AppliedFoodSideEffect {
+                food: FoodInfo {
+                    food_id: FoodId::random(),
+                    side_effects: vec![
+                        SideEffect::AntHungerRate(Multiplier::IncreaseBy(2f32)),
+                        SideEffect::AntHungerRate(Multiplier::IncreaseBy(3f32)),
+                    ],
+                },
+                timeout: Default::default(),
+            }]);
 
-        for f in fixtures {
-            assert_eq!(f.0, f.1.short_name());
-        }
+        let total = applied.calculate_totals();
+        assert_eq!(total.as_float(SideEffectDiscriminants::AntHungerRate), 6f32);
+        assert_eq!(total.as_float(SideEffectDiscriminants::QueenEggRate), 1f32);
+    }
+}
+
+#[test]
+fn short_names() {
+    let fixtures = vec![
+        (
+            "Ant Hunger x2",
+            SideEffect::AntHungerRate(Multiplier::IncreaseBy(2f32))
+        ),
+        (
+            "Ant Hunger /2",
+            SideEffect::AntHungerRate(Multiplier::DecreaseBy(2f32))
+        ),
+        (
+            "Queen Hunger x2",
+            SideEffect::QueenHungerRate(Multiplier::IncreaseBy(2f32))
+        ),
+    ];
+
+    for f in fixtures {
+        assert_eq!(f.0, f.1.short_name());
     }
 }

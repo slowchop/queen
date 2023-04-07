@@ -94,7 +94,7 @@ mod tests {
     fn not_really_a_test() {
         for minutes in 0..50 {
             let food_info = SkillMode::Career.next_food(Duration::from_secs(minutes * 60));
-            let total_score = food_info.side_effects.iter().map(|effect| effect.score()).sum::<i32>();
+            let total_score = food_info.side_effects.iter().map(|effect| effect.score()).sum::<f32>();
             println!("Minutes: {minutes:?} Score: {total_score:?} Food: {food_info:?}");
         }
     }
