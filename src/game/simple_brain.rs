@@ -1,6 +1,12 @@
 use crate::game::new_brain::Action;
 use bevy::prelude::*;
 
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub enum SimpleBrainSet {
+    Actions,
+    AssignComponents,
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub enum IdeaState {
     Prepare(usize),
@@ -21,6 +27,12 @@ pub fn assign_step_components(mut commands: Commands, mut executing: Query<(Enti
                     action.remove(&mut commands.entity(entity));
                 }
 
+                if *step >= executing.steps.len() {
+                    info!("No more steps.");
+                    executing.state = IdeaState::Done;
+                    continue;
+                }
+
                 let action = &executing.steps[*step];
                 info!(?action, "Inserting component");
                 action.insert(&mut commands.entity(entity));
@@ -29,7 +41,7 @@ pub fn assign_step_components(mut commands: Commands, mut executing: Query<(Enti
             }
             IdeaState::Aborting(step) => {
                 let action = &executing.steps[*step];
-                info!(?action, "Removing component because we're aborting");
+                info!(?action, "Removing component because we're aborting.");
                 action.remove(&mut commands.entity(entity));
                 executing.state = IdeaState::Aborted;
             }
@@ -65,12 +77,12 @@ impl Idea {
         self.state = IdeaState::Aborting(current_step);
     }
 
-    pub fn progress(&mut self) {
+    pub fn next_step(&mut self) {
         match self.state {
             IdeaState::Executing(step) => {
                 // OK to overflow. assign_step_components will handle it.
                 self.state = IdeaState::Prepare(step + 1);
-                debug!(?self.state, "Progress");
+                debug!(?self.state, "Next step");
             }
             _ => {
                 panic!("Invalid state: {:?}", self.state);

@@ -1,4 +1,3 @@
-use std::time::Duration;
 use crate::game::animation::{AnimationIndices, AnimationTimer};
 use crate::game::camera::CameraFocus;
 use crate::game::eggs::Egg;
@@ -13,6 +12,10 @@ use crate::game::pathfinding::{Path, SideMapGraph};
 use crate::game::plugin::{Crawler, PlayerState, Speed, ANT_Z, DIRT_Z, QUEEN_Z};
 use crate::game::positions::SideIPos;
 use crate::game::queen::{EggLaidEvent, Queen};
+use crate::game::side_effects::{
+    AppliedFoodSideEffect, AppliedFoodSideEffects, CalculatedSideEffects,
+};
+use crate::game::skill::SkillMode;
 use bevy::asset::AssetServer;
 use bevy::core_pipeline::clear_color::ClearColorConfig;
 use bevy::prelude::*;
@@ -24,8 +27,7 @@ use bevy::utils::HashMap;
 use bevy_prototype_debug_lines::DebugLines;
 use pathfinding::num_traits::Signed;
 use rand::random;
-use crate::game::side_effects::{AppliedFoodSideEffect, AppliedFoodSideEffects, CalculatedSideEffects};
-use crate::game::skill::SkillMode;
+use std::time::Duration;
 
 // pub fn queen_start() -> SideIPos {
 //     SideIPos::new(0, -20)
@@ -53,7 +55,6 @@ pub fn setup_map(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut debug_lines: ResMut<DebugLines>,
-
 
     // TODO: Temporary...
     mut food_state: ResMut<FoodState>,
@@ -87,7 +88,10 @@ pub fn setup_map(
                 food_id: food_info.food_id,
                 amount: 5f32,
             },
-        )
+        );
+
+        dbg!(&side_pos);
+        dbg!(food_state.info_at_position(&side_pos));
     }
 
     let mut side_map_pos_to_entities = HashMap::with_capacity(1_000);
@@ -243,7 +247,13 @@ pub fn setup_queen(mut commands: Commands, asset_server: Res<AssetServer>) {
         transform,
         ..Default::default()
     };
-    commands.spawn((sprite_bundle, Queen::default(), Hunger::default(), AppliedFoodSideEffects::new(), CalculatedSideEffects::new()));
+    commands.spawn((
+        sprite_bundle,
+        Queen::default(),
+        Hunger::default(),
+        AppliedFoodSideEffects::new(),
+        CalculatedSideEffects::new(),
+    ));
 }
 
 // pub fn setup_test_eggs(

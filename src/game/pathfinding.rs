@@ -1,6 +1,7 @@
 use crate::game::map::SIDE_CELL_SIZE;
 use crate::game::plugin::Speed;
 use crate::game::positions::SideIPos;
+use crate::game::side_effects::{CalculatedSideEffects, SideEffectDiscriminants};
 use crate::game::time::GameTime;
 use crate::input::{InputAction, InputStates};
 use bevy::prelude::*;
@@ -8,7 +9,6 @@ use bevy::utils::petgraph::algo::astar;
 use bevy::utils::petgraph::prelude::{EdgeRef, UnGraphMap};
 use bevy::utils::petgraph::visit::IntoEdgeReferences;
 use bevy_prototype_debug_lines::DebugLines;
-use crate::game::side_effects::{CalculatedSideEffects, SideEffectDiscriminants};
 
 #[derive(Debug, Resource, Default)]
 pub struct PathfindingLinesDebug(pub bool);
@@ -81,7 +81,7 @@ impl From<UnGraphMap<SideIPos, u64>> for SideMapGraph {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub enum Path {
     None,
     /// Need to calculate the path for this target destination.
@@ -130,6 +130,7 @@ impl Path {
     }
 }
 
+#[derive(Debug)]
 pub struct PathProgress {
     remaining_steps: Vec<SideIPos>,
 }
@@ -175,12 +176,12 @@ pub fn needs_path(
     }
 }
 
-pub fn update_movement_speed(
-    mut query: Query<(&mut Speed, &CalculatedSideEffects)>,
-) {
+pub fn update_movement_speed(mut query: Query<(&mut Speed, &CalculatedSideEffects)>) {
     const BASE_SPEED: f32 = 32f32;
     for (mut speed, side_effects) in query.iter_mut() {
-        *speed = Speed::new(BASE_SPEED * side_effects.as_float(SideEffectDiscriminants::AntMovementSpeed));
+        *speed = Speed::new(
+            BASE_SPEED * side_effects.as_float(SideEffectDiscriminants::AntMovementSpeed),
+        );
     }
 }
 

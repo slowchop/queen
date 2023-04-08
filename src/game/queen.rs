@@ -1,12 +1,9 @@
-use crate::game::ants::AntType;
 use crate::game::eggs::Egg;
-use crate::game::pathfinding::Path;
 use crate::game::plugin::PlayerState;
 use crate::game::positions::SideIPos;
+use crate::game::side_effects::{CalculatedSideEffects, SideEffectDiscriminants};
 use crate::game::time::GameTime;
 use bevy::prelude::*;
-use crate::game::food::CarryingFood;
-use crate::game::side_effects::{AppliedFoodSideEffects, CalculatedSideEffects, SideEffectDiscriminants};
 
 #[derive(Debug)]
 pub struct EggLaidEvent {
@@ -52,10 +49,9 @@ pub fn grow_and_lay_eggs(
     }
 }
 
-pub fn update_queen_egg_progress_speed(
-    mut query: Query<(&mut Queen, &CalculatedSideEffects)>,
-) {
-    const BASE_SPEED: f32 = 1f32 / 15f32;
+pub fn update_queen_egg_progress_speed(mut query: Query<(&mut Queen, &CalculatedSideEffects)>) {
+    // const BASE_SPEED: f32 = 1f32 / 15f32;
+    const BASE_SPEED: f32 = 1f32 / 30f32;
     for ((mut queen, side_effects)) in query.iter_mut() {
         let speed = BASE_SPEED * side_effects.as_float(SideEffectDiscriminants::QueenEggRate);
         queen.egg_progress_speed = speed;

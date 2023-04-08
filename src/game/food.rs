@@ -228,7 +228,11 @@ impl FoodState {
         position: SideIPos,
         maximum_food: f32,
     ) -> Option<CarryingFood> {
-        let food_cell = self.food_position_cells.get_mut(&position)?;
+        let Some(food_cell) = self.food_position_cells.get_mut(&position) else {
+            warn!("No food at position {:?}", position);
+            return None;
+        };
+
         if food_cell.is_empty() {
             error!("Food cell shouldn't be empty 1!");
             return None;

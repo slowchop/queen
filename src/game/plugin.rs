@@ -8,6 +8,7 @@ use crate::game::pathfinding::{PathfindingLinesDebug, VisitedNodeEvent};
 use crate::game::positions::SideIPos;
 use crate::game::queen::{EggLaidEvent, Queen};
 use crate::game::setup::queen_start;
+use crate::game::simple_brain::SimpleBrainSet;
 use crate::game::skill::SkillMode;
 use crate::game::time::GameTime;
 use crate::game::zones::FoodStorageZones;
@@ -135,8 +136,13 @@ impl Plugin for GamePlugin {
             )
                 .in_set(InputSet::Game),
         );
+        app.configure_set(InputSet::Reset.before(InputSet::Ui));
+        app.configure_set(InputSet::Ui.before(InputSet::GetInput));
+        app.configure_set(InputSet::GetInput.before(InputSet::ProcessInput));
+        app.configure_set(InputSet::ProcessInput.before(InputSet::Raycast));
+        app.configure_set(InputSet::Raycast.before(InputSet::Game));
 
-        app.add_systems((simple_brain::assign_step_components,).in_set(InputSet::Game));
+        // simple brain
 
         app.add_systems(
             (
@@ -144,14 +150,15 @@ impl Plugin for GamePlugin {
                 new_brain::pathfinding_action_2,
                 new_brain::set_path_to_stored_food_action_2,
             )
-                .in_set(InputSet::Game),
+                .in_set(SimpleBrainSet::Actions),
+        );
+        app.add_systems(
+            (simple_brain::assign_step_components, apply_system_buffers)
+                .chain()
+                .in_set(SimpleBrainSet::AssignComponents),
         );
 
-        app.configure_set(InputSet::Reset.before(InputSet::Ui));
-        app.configure_set(InputSet::Ui.before(InputSet::GetInput));
-        app.configure_set(InputSet::GetInput.before(InputSet::ProcessInput));
-        app.configure_set(InputSet::ProcessInput.before(InputSet::Raycast));
-        app.configure_set(InputSet::Raycast.before(InputSet::Game));
+        app.configure_set(SimpleBrainSet::Actions.before(SimpleBrainSet::AssignComponents));
 
         // Brain things
         // app.add_systems(

@@ -70,7 +70,7 @@ pub fn set_path_to_stored_food_action_2(
         info!("------ Pathing to stored food at {:?}", target);
         path.set_target(target);
 
-        idea.progress();
+        idea.next_step();
     }
 }
 
@@ -108,7 +108,7 @@ pub fn eat_action_2(
         let inner = action.0.as_ref().unwrap();
         if time.since_startup() >= inner.finish_eating_at {
             info!("Finished eating food");
-            idea.progress();
+            idea.next_step();
         }
     }
 }
@@ -118,9 +118,18 @@ pub struct PathfindingAction2;
 
 pub fn pathfinding_action_2(mut query: Query<(&mut Idea, &mut Path), With<PathfindingAction2>>) {
     for (mut idea, mut path) in &mut query {
+        info!(?path, "---------------------...");
+
+        if path.is_progressing() {
+            info!("Progressing path");
+            continue;
+        }
+
+        info!("------- end");
+
         if path.did_complete() {
-            idea.progress();
-        } else if path.did_fail() {
+            idea.next_step();
+        } else {
             error!("Path failed");
             idea.abort();
         }
