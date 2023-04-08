@@ -169,7 +169,13 @@ pub fn setup_map(
                 entity.insert(transform);
             }
 
-            let entity_id = entity.insert((cell_content, side_pos)).id();
+            let entity_id = entity
+                .insert((
+                    cell_content,
+                    side_pos,
+                    Name::from(format!("{:?}", side_pos)),
+                ))
+                .id();
 
             side_map_pos_to_entities.insert(side_pos, entity_id);
             side_map_pos_to_cell.insert(side_pos, cell_content);
