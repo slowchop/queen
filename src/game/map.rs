@@ -22,7 +22,8 @@ impl From<Vec<SideIPos>> for ExitPositions {
 
 pub struct UpdateTileDirtAmountEvent(pub Entity);
 
-pub struct UpdateFoodRenderingEvent(pub SideIPos);
+#[derive(Component)]
+pub struct TileNeedsFoodRenderingUpdate;
 
 pub struct AddFoodZoneEvent(pub SideIPos);
 
@@ -243,21 +244,10 @@ pub fn update_food_tile_rendering(
     food_state: Res<FoodState>,
     side_map_to_entities: Res<SideMapPosToEntities>,
     asset_server: Res<AssetServer>,
-    tiles: Query<(Option<&Children>)>,
+    tiles: Query<(Entity, &SideIPos, Option<&Children>), Changed<TileNeedsFoodRenderingUpdate>>,
     child_food_cells: Query<&ChildCellForFood>,
-    mut update_food_rendering_reader: EventReader<UpdateFoodRenderingEvent>,
 ) {
-    for UpdateFoodRenderingEvent(pos) in update_food_rendering_reader.iter() {
-        let Some(entity) = side_map_to_entities.get(pos) else {
-            warn!("No cell found at position {:?} for update_food_tile_rendering", pos);
-            continue;
-        };
-
-        let Ok(maybe_children) = tiles.get(*entity) else {
-            warn!("Could not find entity in query");
-            continue;
-        };
-
+    for (entity, pos, maybe_children) in &tiles {
         // Remove the child cells because we might re-add them.
         info!("Removing child food cells");
         if let Some(child_food_cell) = maybe_children {
@@ -286,6 +276,6 @@ pub fn update_food_tile_rendering(
             .insert(ChildCellForFood)
             .id();
 
-        commands.entity(*entity).push_children(&[child]);
+        commands.entity(entity).push_children(&[child]);
     }
 }

@@ -1,5 +1,5 @@
 use crate::game::food::{FeedEvent, FoodState};
-use crate::game::map::UpdateFoodRenderingEvent;
+use crate::game::map::{CellType, SideMapPosToEntities, TileNeedsFoodRenderingUpdate};
 use crate::game::pathfinding::Path;
 use crate::game::positions::SideIPos;
 use crate::game::simple_brain::{Idea, Sequence};
@@ -67,7 +67,6 @@ pub fn set_path_to_stored_food_action_2(
             continue;
         };
 
-        info!("------ Pathing to stored food at {:?}", target);
         path.set_target(target);
 
         idea.next_step();
@@ -75,11 +74,12 @@ pub fn set_path_to_stored_food_action_2(
 }
 
 pub fn eat_action_2(
+    mut commands: Commands,
     time: Res<GameTime>,
+    side_map_pos_to_entities: Res<SideMapPosToEntities>,
     mut food_state: ResMut<FoodState>,
     mut query: Query<(Entity, &mut Idea, &mut EatAction2, &Transform)>,
     mut feed_writer: EventWriter<FeedEvent>,
-    mut update_food_rendering_writer: EventWriter<UpdateFoodRenderingEvent>,
 ) {
     for (entity, mut idea, mut action, transform) in &mut query {
         if action.is_none() {
@@ -98,7 +98,13 @@ pub fn eat_action_2(
                 carrying_food,
             });
 
-            update_food_rendering_writer.send(UpdateFoodRenderingEvent(pos));
+            // update_food_rendering_writer.send(UpdateFoodRenderingEvent(pos));
+            let tile_entity = side_map_pos_to_entities
+                .get(&pos)
+                .expect("No tile entity at position");
+            commands
+                .entity(*tile_entity)
+                .insert(TileNeedsFoodRenderingUpdate);
 
             **action = Some(EatActionInner {
                 finish_eating_at: time.since_startup() + Duration::from_secs(5),
@@ -118,14 +124,10 @@ pub struct PathfindingAction2;
 
 pub fn pathfinding_action_2(mut query: Query<(&mut Idea, &mut Path), With<PathfindingAction2>>) {
     for (mut idea, mut path) in &mut query {
-        info!(?path, "---------------------...");
-
         if path.is_progressing() {
             info!("Progressing path");
             continue;
         }
-
-        info!("------- end");
 
         if path.did_complete() {
             idea.next_step();

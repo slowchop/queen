@@ -3,7 +3,7 @@ use crate::game::ants::AntType;
 use crate::game::eggs::SpawnAntEvent;
 use crate::game::food::FoodInfo;
 use crate::game::food_types::FoodId;
-use crate::game::map::{AddFoodZoneEvent, UpdateFoodRenderingEvent, UpdateTileDirtAmountEvent};
+use crate::game::map::{AddFoodZoneEvent, UpdateTileDirtAmountEvent};
 use crate::game::pathfinding::{PathfindingLinesDebug, VisitedNodeEvent};
 use crate::game::positions::SideIPos;
 use crate::game::queen::{EggLaidEvent, Queen};
@@ -63,7 +63,6 @@ impl Plugin for GamePlugin {
         app.add_event::<food::AddFoodForAntToCarryEvent>();
         app.add_event::<food::FeedEvent>();
         app.add_event::<UpdateTileDirtAmountEvent>();
-        app.add_event::<UpdateFoodRenderingEvent>();
         app.add_event::<AddFoodZoneEvent>();
 
         app.insert_resource(GameTime::default());

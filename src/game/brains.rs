@@ -10,7 +10,7 @@ use crate::game::food::{
     DiscoveredFood, FeedEvent, FoodState, DEFAULT_CARGO_CAPACITY,
 };
 use crate::game::hunger::Hunger;
-use crate::game::map::{SideMapPosToEntities, UpdateFoodRenderingEvent};
+use crate::game::map::{SideMapPosToEntities, TileNeedsFoodRenderingUpdate};
 use crate::game::plugin::{PlayerState, QueensChoice};
 use crate::game::positions::SideIPos;
 use crate::game::queen::Queen;
@@ -143,7 +143,6 @@ pub fn place_food_if_possible_action(
     mut ants: Query<(Entity, &Children, &Transform)>,
     carrying_food: Query<&CarryingFood>,
     mut query: Query<(&Actor, &mut ActionState), With<PlaceFoodIfPossibleAction>>,
-    mut update_food_rendering_writer: EventWriter<UpdateFoodRenderingEvent>,
 ) {
     for (Actor(actor), mut state) in query.iter_mut() {
         let Ok((entity, children, transform)) = ants.get_mut(*actor) else {
@@ -179,7 +178,8 @@ pub fn place_food_if_possible_action(
         // 4) The sprites for the food will update elsewhere when changed.
         let pos = SideIPos::from(transform);
         food_state.add_food_at_position(pos, &carrying_food);
-        update_food_rendering_writer.send(UpdateFoodRenderingEvent(pos));
+
+        commands.entity(entity).insert(TileNeedsFoodRenderingUpdate);
 
         *state = ActionState::Success;
     }

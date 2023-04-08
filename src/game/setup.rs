@@ -5,8 +5,8 @@ use crate::game::food::{CarryingFood, DiscoveredFood, FoodState};
 use crate::game::food_types::{FoodId, FoodType};
 use crate::game::hunger::Hunger;
 use crate::game::map::{
-    AddFoodZoneEvent, CellContent, ExitPositions, SideMapPosToEntities, UpdateFoodRenderingEvent,
-    SIDE_CELL_SIZE,
+    AddFoodZoneEvent, CellContent, ExitPositions, SideMapPosToEntities,
+    TileNeedsFoodRenderingUpdate, SIDE_CELL_SIZE,
 };
 use crate::game::pathfinding::{Path, SideMapGraph};
 use crate::game::plugin::{Crawler, PlayerState, Speed, ANT_Z, DIRT_Z, QUEEN_Z};
@@ -61,9 +61,6 @@ pub fn setup_map(
     skill_mode: Res<SkillMode>,
     // TODO: Temporary...
     mut add_zone_writer: EventWriter<AddFoodZoneEvent>,
-
-    // TODO: Temporary...
-    mut update_food_rendering_writer: EventWriter<UpdateFoodRenderingEvent>,
 ) {
     // TODO: Temporary...
     add_zone_writer.send(AddFoodZoneEvent(SideIPos::new(10, -20)));
@@ -81,7 +78,6 @@ pub fn setup_map(
         });
 
         let side_pos = SideIPos::new(5, -20);
-        update_food_rendering_writer.send(UpdateFoodRenderingEvent(side_pos));
         food_state.add_food_at_position(
             side_pos,
             &CarryingFood {
@@ -89,9 +85,6 @@ pub fn setup_map(
                 amount: 5f32,
             },
         );
-
-        dbg!(&side_pos);
-        dbg!(food_state.info_at_position(&side_pos));
     }
 
     let mut side_map_pos_to_entities = HashMap::with_capacity(1_000);
@@ -132,7 +125,7 @@ pub fn setup_map(
                 //
                 let forced_dirt_amount = (y.abs() * 10 + x.abs() * 30) as f32;
                 // Add a random amount of dirt.
-                let forced_dirt_amount = forced_dirt_amount + rand::random::<f32>() * 50.0 - 20.0;
+                let forced_dirt_amount = forced_dirt_amount + random::<f32>() * 50.0 - 20.0;
 
                 let forced_dirt_amount = forced_dirt_amount.max(0.0) as u64;
 
@@ -171,9 +164,10 @@ pub fn setup_map(
 
             let entity_id = entity
                 .insert((
+                    Name::from(format!("{:?}", side_pos)),
                     cell_content,
                     side_pos,
-                    Name::from(format!("{:?}", side_pos)),
+                    TileNeedsFoodRenderingUpdate,
                 ))
                 .id();
 
